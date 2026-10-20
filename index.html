@@ -565,8 +565,8 @@ function vLanding(){
   return `<section class="land">
     <div>
       <span class="label">For artists, musicians and creatives</span>
-      <h1 style="margin-top:12px">Post less.<br>Mean more.</h1>
-      <p class="lede">Make it once, post it everywhere. Rollout Room turns one post into versions for Instagram, TikTok, YouTube and X, schedules each at that platform's best time, and posts them all once you approve. Then your numbers show what worked, so you can post less and mean more.</p>
+      <h1 style="margin-top:12px">Make it once.<br>Post it everywhere.</h1>
+      <p class="lede">Rollout Room turns one post into versions for Instagram, TikTok, YouTube and X, schedules each at that platform's best time, and posts them all once you approve. Then your numbers show what worked, so your plan fits you and your goals.</p>
       <div class="ctas"><button class="btn primary lg" data-act="startWiz">Create your workspace</button><button class="btn lg" data-act="sample">Look around with a sample creator</button></div>
       <p class="muted small" style="margin-top:14px">${MODE==="claude" ? "" : MODE==="supabase" ? `Already have an account? <button class="btn ghost sm" data-act="authGo" data-to="signin" style="padding:0 4px">Sign in</button>` : "Your workspace is saved in this browser."}</p>
       <p class="muted small" style="margin-top:6px;max-width:44ch">${privacyShort()}</p>
@@ -604,7 +604,7 @@ function vWizard(){
     </div>`; }).join("")}</div>`;
   if(step === 4) body = `<h2>How much time do you have?</h2>
     <label class="field">Hours a week for content <span class="mono" style="font-size:1.4rem;font-family:var(--display)" id="w_hours_out">${w.hours}</span><input type="range" id="w_hours" min="1" max="25" value="${w.hours}"></label>
-    <p class="muted small">The plan stays inside this budget. Quality over quantity: fewer, stronger posts beat burning out.</p>
+    <p class="muted small">The plan stays inside this budget, so you can keep it up without burning out.</p>
     <div class="stack" style="gap:8px"><span class="label">What you enjoy making</span><div class="chips">${ENJOY.map(t=>`<button class="chip" data-act="wtoggle" data-f="enjoy" data-v="${t}" aria-pressed="${w.enjoy.includes(t)}">${t}</button>`).join("")}</div></div>`;
   return `<div class="wizard panel stack">${bar}${body}
     <div class="spread" style="margin-top:6px"><button class="btn ghost" data-act="wback">${step===1?"Cancel":"Back"}</button><button class="btn primary" data-act="wnext">${step===4?"Open my dashboard":"Continue"}</button></div></div>`;
@@ -1028,7 +1028,7 @@ async function strategy(){
   UI.busy.strat = true; render();
   try{
     const vs = vault();
-    const r = await ask(`You are a senior social media strategist who treats social as marketing, not as gambling on an algorithm. Every recommendation must cite the creator's own data below where possible, and fit their time budget. Quality over quantity.
+    const r = await ask(`You are a senior social media strategist who treats social as marketing, not as gambling on an algorithm. Every recommendation must cite the creator's own data below where possible, and fit their time budget. Recommend the cadence their results and schedule support, whether that means posting more or less than they do now.
 ${brief()}
 VAULT: ${vs.map(v=>`${v.title} (${v.type}${v.era?", "+v.era:""})`).join("; ") || "(empty)"}
 Today: ${today()}.

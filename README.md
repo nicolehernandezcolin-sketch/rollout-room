@@ -2,7 +2,7 @@
 
 A calmer way for creatives to run their socials. Set a goal, see Instagram, TikTok, YouTube and X numbers in one place (each platform on its own and all together), get a posting plan built from your own results, approve every post yourself, and share a live media kit with brands, venues and sponsors.
 
-The aim is quality over quantity: post on a cadence your numbers say works and your schedule can keep up, instead of chasing the algorithm until you burn out.
+Make it once, post it everywhere. Your plan is built from your own numbers and the time you actually have, so you post on a cadence that works for you instead of chasing the algorithm until you burn out.
 
 **Live site:** https://nicolehernandezcolin-sketch.github.io/rollout-room/
 
