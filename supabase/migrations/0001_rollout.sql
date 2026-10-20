@@ -63,3 +63,18 @@ begin
 end;
 $$;
 revoke all on function public.bump_ai_usage(uuid, integer) from public, anon, authenticated;
+
+-- Each creator's workspace key, stored only in wrapped (encrypted) form: once under their password,
+-- once under their recovery code. Both wraps happen in the browser; the server can't unwrap either.
+create table if not exists public.rollout_keys (
+  user_id uuid primary key default auth.uid() references auth.users on delete cascade,
+  pw_salt text not null,
+  pw_box jsonb not null,
+  rc_salt text not null,
+  rc_box jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.rollout_keys enable row level security;
+drop policy if exists "Creators manage their own keys" on public.rollout_keys;
+create policy "Creators manage their own keys" on public.rollout_keys
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

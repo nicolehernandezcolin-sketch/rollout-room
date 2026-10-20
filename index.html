@@ -91,7 +91,7 @@ nav .count{font-family:var(--mono);font-size:.72rem;margin-left:6px;opacity:.75}
 .btn.sm{padding:5px 10px;font-size:.8rem}
 label.field{display:flex;flex-direction:column;gap:5px;font-weight:600;font-size:.85rem}
 label.field .hint,.hint{font-weight:400;color:var(--ink-2);font-size:.8rem}
-input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;font-weight:400}
+input[type=text],input[type=email],input[type=password],input[type=number],input[type=date],input[type=time],select,textarea{background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;font-weight:400}
 input[type=range]{width:100%;accent-color:var(--accent)}
 textarea{resize:vertical;min-height:84px;line-height:1.5}
 .banner{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--accent-soft);border-radius:var(--r);padding:12px 16px}
@@ -495,11 +495,12 @@ function render(preserve){
   const active = document.activeElement?.id;
   const p = profile();
   $("#who").innerHTML = S.sampleMode ? `<span class="demo-tag">Sample creator</span><button class="btn sm" data-act="exitSample">${S.docs.get("profile")?.onboarded ? "Back to my workspace" : "Create my own"}</button>`
-    : (p?.onboarded ? `${anyDemo()?`<span class="demo-tag">Sample data</span>`:""}<span class="muted">${esc(p.name || S.me?.name || "")}</span>` : "") + (MODE==="supabase" && S.uid ? `<button class="btn ghost sm" data-act="signout">Sign out</button>` : "");
+    : (p?.onboarded ? `${anyDemo()?`<span class="demo-tag">Sample data</span>`:""}<span class="muted">${esc(p.name || S.me?.name || "")}</span>` : "") + (MODE==="supabase" ? (S.key ? `<button class="btn ghost sm" data-act="signout">Sign out</button>` : !S.uid && UI.auth !== "signin" ? `<button class="btn sm" data-act="authGo" data-to="signin">Sign in</button>` : "") : "");
   let html;
   if(UI.kitView) html = vKitPublic();
+  else if(MODE==="supabase" && UI.auth && !S.sampleMode) html = vAuth();
   else if(!S.ready && !S.sampleMode) html = `<div class="empty" style="margin-top:40px">Loading your workspace…</div>`;
-  else if(!p?.onboarded) html = UI.wiz ? vWizard() : UI.signin ? vSignIn() : vLanding();
+  else if(!p?.onboarded) html = UI.wiz ? vWizard() : vLanding();
   else {
     const waiting = posts().filter(x => x.status==="draft").length;
     html = `<nav aria-label="Sections">${TABS.map(t => `<button data-go="${t.k}" aria-current="${UI.tab===t.k}">${t.name}${t.k==="queue"&&waiting?`<span class="count">${waiting}</span>`:""}</button>`).join("")}</nav>`
@@ -511,13 +512,54 @@ function render(preserve){
 }
 
 /* ---------- landing / sign up ---------- */
-const PRIVACY_SHORT = "Your content and numbers stay yours. Nobody else can see your workspace, nothing is used to train AI, and you can delete everything at any time.";
-function vSignIn(){
-  if(UI.signinSent) return `<div class="signin panel stack"><h2>Check your email</h2><p>We sent a sign-in link to <b>${esc(UI.signinSent)}</b>. Open it on this device to continue.</p><button class="btn ghost" data-act="signinBack">Use a different email</button></div>`;
-  return `<div class="signin panel stack"><h2>Create your workspace</h2><p class="muted">Enter your email and we'll send you a sign-in link. No password needed.</p>
-    <label class="field">Email<input type="email" id="si_email" autocomplete="email" style="background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:9px 11px"></label>
-    <div class="row"><button class="btn primary" data-act="signinSend" ${UI.busy.signin?"disabled":""}>${UI.busy.signin?"Sending…":"Email me a link"}</button><button class="btn ghost" data-act="signinBack">Back</button></div>
-    <p class="muted small">${PRIVACY_SHORT}</p></div>`;
+function privacyShort(){
+  return MODE==="supabase" ? "Your workspace is encrypted on your device before it's saved, so only you can read it. Nothing is used to train AI, and you can delete your account at any time."
+    : "Your content and numbers stay yours. Nobody else can see your workspace, nothing is used to train AI, and you can delete everything at any time.";
+}
+const authInput = (id, label, type, extra="") => `<label class="field">${label}<input type="${type}" id="${id}" ${extra}></label>`;
+function vAuth(){
+  const a = UI.auth; const busy = UI.busy.auth;
+  const btn = (act, text) => `<button class="btn primary" data-act="${act}" ${busy?"disabled":""}>${busy?"One moment…":text}</button>`;
+  const remember = `<label class="row small" style="gap:8px"><input type="checkbox" id="au_remember" checked> Stay unlocked on this device</label>`;
+  const err = UI.authErr ? `<p class="small" style="color:var(--warn)">${esc(UI.authErr)}</p>` : "";
+  let body = "";
+  if(a === "signup") body = `<h2>Create your account</h2>
+    ${authInput("au_email","Email","email",'autocomplete="email"')}
+    ${authInput("au_pw","Password <span class=\"hint\">At least 10 characters</span>","password",'autocomplete="new-password"')}
+    ${authInput("au_pw2","Type it again","password",'autocomplete="new-password"')}
+    ${remember}${err}
+    <div class="row">${btn("authSignup","Create account")}<button class="btn ghost" data-act="authGo" data-to="signin">I have an account</button></div>
+    <p class="muted small">${privacyShort()} Your password is the key to your data. We can't see it or reset it for you, so you'll get a recovery code to keep somewhere safe.</p>`;
+  if(a === "signin") body = `<h2>Sign in</h2>
+    ${authInput("au_email","Email","email",'autocomplete="email"')}
+    ${authInput("au_pw","Password","password",'autocomplete="current-password"')}
+    ${remember}${err}
+    <div class="row">${btn("authSignin","Sign in")}<button class="btn ghost" data-act="authGo" data-to="forgot">Forgot password</button><button class="btn ghost" data-act="authGo" data-to="signup">Create an account</button></div>`;
+  if(a === "confirm") body = `<h2>Confirm your email</h2><p>We sent a link to <b>${esc(UI.authEmail)}</b>. Open it, then come back and sign in with your password.</p><div><button class="btn" data-act="authGo" data-to="signin">Go to sign in</button></div>`;
+  if(a === "forgot") body = `<h2>Reset your password</h2><p class="muted">We'll email you a link. To keep your workspace, you'll need the recovery code you saved when you signed up.</p>
+    ${authInput("au_email","Email","email",'autocomplete="email"')}${err}
+    <div class="row">${btn("authForgot","Email me a link")}<button class="btn ghost" data-act="authGo" data-to="signin">Back</button></div>`;
+  if(a === "forgotSent") body = `<h2>Check your email</h2><p>If there's an account for <b>${esc(UI.authEmail)}</b>, a reset link is on its way. Open it on this device.</p><div><button class="btn ghost" data-act="authGo" data-to="signin">Back to sign in</button></div>`;
+  if(a === "unlock") body = `<h2>Unlock your workspace</h2><p class="muted">Signed in as <b>${esc(S.me?.email||"")}</b>. Enter your password to decrypt your workspace on this device.</p>
+    ${authInput("au_pw","Password","password",'autocomplete="current-password"')}${remember}${err}
+    <div class="row">${btn("authUnlock","Unlock")}<button class="btn ghost" data-act="signout">Sign out</button></div>`;
+  if(a === "recovery-show") body = `<h2>Save your recovery code</h2>
+    <p>If you ever forget your password, this code is the only way to get your workspace back. We can't recover it for you.</p>
+    <div class="row"><code class="mono" style="font-size:1.15rem;letter-spacing:.04em;user-select:all;background:var(--ground);padding:10px 14px;border-radius:8px;word-break:break-all">${esc(UI.rc)}</code><button class="btn sm" data-act="copyRc">Copy</button></div>
+    <p class="muted small">Keep it in a password manager or somewhere safe offline. Don't send it to anyone.</p>
+    <label class="row small" style="gap:8px"><input type="checkbox" id="au_saved"> I've saved my recovery code</label>${err}
+    <div><button class="btn primary" data-act="rcDone">Continue</button></div>`;
+  if(a === "reset") body = `<h2>Choose a new password</h2><p class="muted">Enter the recovery code you saved at sign-up so your workspace stays unlocked with the new password.</p>
+    ${authInput("au_rc","Recovery code","text",'autocomplete="off" spellcheck="false" placeholder="XXXX-XXXX-XXXX-XXXX-XXXX-XXXX"')}
+    ${authInput("au_pw","New password <span class=\"hint\">At least 10 characters</span>","password",'autocomplete="new-password"')}
+    ${authInput("au_pw2","Type it again","password",'autocomplete="new-password"')}${remember}${err}
+    <div class="row">${btn("authReset","Save new password")}<button class="btn ghost" data-act="authGo" data-to="reset-fresh">I don't have my recovery code</button></div>`;
+  if(a === "reset-fresh") body = `<h2>Start fresh</h2><p>Without your recovery code, your encrypted workspace can't be opened by anyone, including us. You can set a new password and start over with an empty workspace.</p>
+    ${authInput("au_pw","New password <span class=\"hint\">At least 10 characters</span>","password",'autocomplete="new-password"')}
+    ${authInput("au_pw2","Type it again","password",'autocomplete="new-password"')}
+    <label class="row small" style="gap:8px"><input type="checkbox" id="au_wipe"> I understand my current workspace and media kit will be deleted</label>${remember}${err}
+    <div class="row"><button class="btn danger" data-act="authResetFresh" ${busy?"disabled":""}>${busy?"One moment…":"Delete and start fresh"}</button><button class="btn ghost" data-act="authGo" data-to="reset">Back</button></div>`;
+  return `<div class="signin panel stack">${body}</div>`;
 }
 function vLanding(){
   return `<section class="land">
@@ -526,8 +568,8 @@ function vLanding(){
       <h1 style="margin-top:12px">Post less.<br>Mean more.</h1>
       <p class="lede">Set a goal. Connect your accounts. Get a posting plan built from your own numbers, approve every post yourself, and share a media kit that shows partners where you stand.</p>
       <div class="ctas"><button class="btn primary lg" data-act="startWiz">Create your workspace</button><button class="btn lg" data-act="sample">Look around with a sample creator</button></div>
-      <p class="muted small" style="margin-top:14px">${MODE==="claude" ? "No password needed." : MODE==="supabase" ? "Sign up with your email. No password needed." : "Your workspace is saved in this browser."}</p>
-      <p class="muted small" style="margin-top:6px;max-width:44ch">${PRIVACY_SHORT}</p>
+      <p class="muted small" style="margin-top:14px">${MODE==="claude" ? "" : MODE==="supabase" ? `Already have an account? <button class="btn ghost sm" data-act="authGo" data-to="signin" style="padding:0 4px">Sign in</button>` : "Your workspace is saved in this browser."}</p>
+      <p class="muted small" style="margin-top:6px;max-width:44ch">${privacyShort()}</p>
     </div>
     <div class="loop">
       <div><b>Goal</b><span class="muted">10,000 followers by Dec 31. The app works out the daily pace you need.</span></div>
@@ -918,10 +960,21 @@ function vSettings(){
         <label class="field">Hours / week<input type="number" id="s_hours" min="1" max="40" value="${esc(p.hours)}"></label></div>
       <div><button class="btn primary" data-act="saveSettings">Save settings</button></div>
     </div>
+    ${MODE==="supabase" && S.key && !S.sampleMode ? `<div class="panel stack"><h3>Account and security</h3>
+      <p class="small">Signed in as <b>${esc(S.me?.email||"")}</b>. Your workspace is encrypted on your device before it's saved. Only your password or your recovery code can unlock it.</p>
+      ${UI.authErr?`<p class="small" style="color:var(--warn)">${esc(UI.authErr)}</p>`:""}${UI.secMsg?`<p class="small" style="color:var(--ok)">${esc(UI.secMsg)}</p>`:""}
+      <div class="grid3"><label class="field">Current password<input type="password" id="sec_cur" autocomplete="current-password"></label><label class="field">New password<input type="password" id="sec_new" autocomplete="new-password"></label><label class="field">New password again<input type="password" id="sec_new2" autocomplete="new-password"></label></div>
+      <div><button class="btn" data-act="changePw" ${UI.busy.auth?"disabled":""}>Change password</button></div>
+      <details class="small"><summary>Make a new recovery code</summary><div class="stack" style="margin-top:10px"><p class="muted">Your old code stops working once you make a new one.</p>
+        <label class="field" style="max-width:320px">Password<input type="password" id="sec_cur2" autocomplete="current-password"></label>
+        <div><button class="btn sm" data-act="newRc" ${UI.busy.auth?"disabled":""}>Make new code</button></div>
+        ${UI.rcNew?`<div class="row"><code class="mono" style="user-select:all;background:var(--ground);padding:8px 12px;border-radius:8px">${esc(UI.rcNew)}</code><button class="btn sm" data-act="copyRc">Copy</button></div><p class="muted">Save it somewhere safe now. It won't be shown again.</p>`:""}</div></details>
+      <div class="row"><button class="btn" data-act="signout">Sign out</button>${UI.confirm==="account"?`<button class="btn danger" data-act="deleteAccount">Delete my account for good</button><button class="btn ghost" data-act="cancelDel">Cancel</button>`:`<button class="btn ghost" data-act="askDeleteAccount">Delete my account</button>`}</div>
+    </div>` : ""}
     <div class="panel stack small"><h3>Your data</h3>
       <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
         <li>Your content, captions and numbers belong to you. Rollout Room only stores them to show you your own workspace.</li>
-        <li>No one else can see your workspace. Your media kit is public only if you create a link for it.</li>
+        <li>No one else can see your workspace.${MODE==="supabase" ? " It's encrypted on your device (AES-256) before it's saved, and the server never sees your password or recovery code, so even the people running the server can't read it." : ""} Your media kit is public only if you create a link for it; that published copy isn't encrypted, because partners need to read it.</li>
         <li>When you ask for suggestions, the request goes to Claude's API just to write the answer. Anthropic doesn't train its models on API data by default.</li>
         <li>Start over below deletes everything, including your media kit link.</li></ul></div>
     ${S.sampleMode ? "" : `<div class="panel stack"><h3>Start over</h3><p class="muted small">Deletes your profile, plan, queue, vault, logged counts and media kit link.</p>
@@ -1064,7 +1117,7 @@ document.addEventListener("click", async ev => {
   switch(a){
     case "sample": S.sampleMode = true; S.sampleDocs = sampleWorkspace(); UI.tab = "dash"; render(); window.scrollTo({top:0}); break;
     case "exitSample": S.sampleMode = false; UI.open = null; UI.tab = "dash"; render(); window.scrollTo({top:0}); break;
-    case "startWiz": if(MODE==="supabase" && !S.uid){ UI.signin = true; render(); break; } startWizard(); render(); break;
+    case "startWiz": if(MODE==="supabase" && !S.key){ UI.auth = S.uid ? "unlock" : "signup"; UI.authErr = null; render(); break; } startWizard(); render(); break;
     case "wpick": wizCollect(); UI.draft[b.dataset.f] = b.dataset.v; render(); break;
     case "wtoggle": { wizCollect(); const f = b.dataset.f, v = b.dataset.v; const arr = UI.draft[f]; UI.draft[f] = arr.includes(v) ? arr.filter(z=>z!==v) : [...arr, v]; render(); break; }
     case "wback": wizCollect(); UI.wiz = Math.max(0, UI.wiz-1); render(); break;
@@ -1078,14 +1131,77 @@ document.addEventListener("click", async ev => {
       put("profile", {name:w.name, creatorType:w.creatorType, world:w.world, audience:w.audience, tone:w.tone, goal:w.goal, goalDate:w.goalDate, goalPlatform:gp, why:w.why, campaign:w.campaign,
         platforms:w.platforms, handles:Object.fromEntries(w.platforms.map(k=>[k, w.handles[k]||""])), connections, hours:w.hours, enjoy:w.enjoy, onboarded:true, kit:{}, createdAt:Date.now()});
       UI.wiz = 0; UI.tab = "dash"; render(); window.scrollTo({top:0}); toast("Your workspace is ready. Build your plan next."); break; }
-    case "signinSend": {
-      const email = ($("#si_email")?.value||"").trim(); if(!/^\S+@\S+\.\S+$/.test(email)){ toast("Enter a valid email address."); return; }
-      UI.busy.signin = true; render();
-      const { error } = await S.sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin + location.pathname } });
-      UI.busy.signin = false; if(error){ toast("Couldn't send the link. Wait a minute and try again."); render(); return; }
-      UI.signinSent = email; render(); break; }
-    case "signinBack": if(UI.signinSent) UI.signinSent = null; else UI.signin = false; render(); break;
-    case "signout": await S.sb.auth.signOut(); UI.tab = "dash"; UI.wiz = 0; UI.signin = false; render(); break;
+    case "authGo": UI.auth = b.dataset.to; UI.authErr = null; render(); break;
+    case "authSignup": authStep(async () => {
+      const email = authVal("au_email").trim(); if(!/^\S+@\S+\.\S+$/.test(email)) fail("Enter a valid email address.");
+      const pw = newPasswordPair(); const remember = !!$("#au_remember")?.checked;
+      const { data, error } = await S.sb.auth.signUp({ email, password: await authPassword(email, pw), options:{ emailRedirectTo: siteUrl() } });
+      if(error) fail(error.code === "user_already_exists" ? "That email already has an account. Sign in instead." : error.code === "over_email_send_rate_limit" ? "Too many tries. Wait a minute and try again." : "Couldn't create the account. Try again.");
+      if(data.user && !data.user.identities?.length) fail("That email already has an account. Sign in instead.");
+      if(data.session){ S.uid = data.user.id; S.me = {name:"", email}; await unlockWith(pw, remember); return; }
+      UI.authEmail = email; UI.auth = "confirm";
+    }); break;
+    case "authSignin": authStep(async () => {
+      const email = authVal("au_email").trim(), pw = authVal("au_pw"); const remember = !!$("#au_remember")?.checked;
+      if(!email || !pw) fail("Enter your email and password.");
+      const { data, error } = await S.sb.auth.signInWithPassword({ email, password: await authPassword(email, pw) });
+      if(error) fail(error.code === "email_not_confirmed" ? "Confirm your email first. The link is in your inbox." : "Wrong email or password.");
+      S.uid = data.user.id; S.me = {name:"", email};
+      await unlockWith(pw, remember);
+    }); break;
+    case "authUnlock": authStep(async () => {
+      const pw = authVal("au_pw"); const remember = !!$("#au_remember")?.checked; const email = S.me?.email || "";
+      const { error } = await S.sb.auth.signInWithPassword({ email, password: await authPassword(email, pw) });
+      if(error) fail("Wrong password.");
+      await unlockWith(pw, remember);
+    }); break;
+    case "authForgot": authStep(async () => {
+      const email = authVal("au_email").trim(); if(!/^\S+@\S+\.\S+$/.test(email)) fail("Enter a valid email address.");
+      const { error } = await S.sb.auth.resetPasswordForEmail(email, { redirectTo: siteUrl() });
+      if(error) fail("Couldn't send the link. Wait a minute and try again.");
+      UI.authEmail = email; UI.auth = "forgotSent";
+    }); break;
+    case "authReset": authStep(async () => {
+      const pw = newPasswordPair(); const remember = !!$("#au_remember")?.checked; const row = await keyRow();
+      if(!row) fail("No workspace found for this account. Choose “I don't have my recovery code” to start fresh.");
+      let raw; try{ raw = await unseal(await kekFrom(normCode(authVal("au_rc")), row.rc_salt), row.rc_box); }catch{ fail("That recovery code doesn't match."); }
+      const { error } = await S.sb.auth.updateUser({ password: await authPassword(S.me.email, pw) });
+      if(error) fail("Couldn't save the new password. Open the reset link from your email again.");
+      await rewrapPassword(raw, pw); await useKey(await aesKey(raw), remember);
+      if(!(await loadWorkspace())) fail("This workspace couldn't be unlocked.");
+      toast("Password changed");
+    }); break;
+    case "authResetFresh": authStep(async () => {
+      const pw = newPasswordPair(); if(!$("#au_wipe")?.checked) fail("Tick the box to confirm."); const remember = !!$("#au_remember")?.checked;
+      const { error } = await S.sb.auth.updateUser({ password: await authPassword(S.me.email, pw) });
+      if(error) fail("Couldn't save the new password. Open the reset link from your email again.");
+      await S.sb.from("rollout_docs").delete().eq("user_id", S.uid); await S.sb.from("media_kits").delete().eq("user_id", S.uid); await S.sb.from("rollout_keys").delete().eq("user_id", S.uid);
+      await unlockWith(pw, remember);
+    }); break;
+    case "copyRc": copyText(UI.rc || UI.rcNew, "Recovery code copied"); break;
+    case "rcDone": if(!$("#au_saved")?.checked){ UI.authErr = "Tick the box once you've saved your code."; render(); break; } UI.rc = null; UI.auth = null; UI.authErr = null; render(); break;
+    case "changePw": authStep(async () => {
+      UI.secMsg = null; const cur = authVal("sec_cur"), pw = authVal("sec_new"); const email = S.me.email;
+      if(pw.length < 10) fail("Use at least 10 characters for the new password."); if(pw !== authVal("sec_new2")) fail("The new passwords don't match.");
+      const { error } = await S.sb.auth.signInWithPassword({ email, password: await authPassword(email, cur) }); if(error) fail("Your current password is wrong.");
+      const row = await keyRow(); const raw = await unseal(await kekFrom(cur, row.pw_salt), row.pw_box);
+      const { error: e2 } = await S.sb.auth.updateUser({ password: await authPassword(email, pw) }); if(e2) fail("Couldn't change the password. Try again.");
+      await rewrapPassword(raw, pw); UI.secMsg = "Password changed.";
+    }); break;
+    case "newRc": authStep(async () => {
+      UI.secMsg = null; const cur = authVal("sec_cur2"); const email = S.me.email;
+      const { error } = await S.sb.auth.signInWithPassword({ email, password: await authPassword(email, cur) }); if(error) fail("Wrong password.");
+      const row = await keyRow(); const raw = await unseal(await kekFrom(cur, row.pw_salt), row.pw_box);
+      const code = newRecoveryCode(), rcSalt = newSalt();
+      const { error: e2 } = await S.sb.from("rollout_keys").update({ rc_salt:rcSalt, rc_box: await seal(await kekFrom(normCode(code), rcSalt), raw) }).eq("user_id", S.uid); if(e2) fail("Couldn't save the new code. Try again.");
+      UI.rcNew = code;
+    }); break;
+    case "askDeleteAccount": UI.confirm = "account"; render(); break;
+    case "deleteAccount": authStep(async () => {
+      const { error } = await S.sb.functions.invoke("delete-account", { body:{} }); if(error) fail("Couldn't delete the account. Try again.");
+      await deviceKeys.del(S.uid); await S.sb.auth.signOut(); clearSession(); UI.confirm = null; UI.tab = "dash"; UI.wiz = 0; toast("Your account and workspace are deleted");
+    }); break;
+    case "signout": if(S.uid) await deviceKeys.del(S.uid); await S.sb.auth.signOut(); clearSession(); UI.tab = "dash"; UI.wiz = 0; UI.auth = null; UI.rcNew = null; UI.secMsg = null; render(); break;
     case "aplat": UI.aPlat = b.dataset.k; render(); break;
     case "strategy": strategy(); break;
     case "fillTwoWeeks": fillTwoWeeks(); break;
@@ -1187,37 +1303,102 @@ async function aiCall(prompt, opts={}){
   return data?.result;
 }
 
+/* ---------- accounts and encryption (connected mode) ----------
+   Each workspace is encrypted in the browser with its own random key (AES-256-GCM) before it's saved.
+   That key is stored only in wrapped form: once under a key made from the password, once under a key made
+   from a recovery code (PBKDF2-SHA-256, 600,000 rounds). The server never sees the password either: sign-in
+   uses a separate value derived from it, so the database holds nothing that can unlock a workspace. */
+const te = new TextEncoder(), td = new TextDecoder();
+const b64 = buf => { const b = new Uint8Array(buf); let s = ""; for(let i=0;i<b.length;i+=0x8000) s += String.fromCharCode(...b.subarray(i,i+0x8000)); return btoa(s); };
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const KDF_ROUNDS = 600000;
+async function pbkdf2(secret, salt){ const base = await crypto.subtle.importKey("raw", te.encode(secret), "PBKDF2", false, ["deriveBits"]); return new Uint8Array(await crypto.subtle.deriveBits({name:"PBKDF2", hash:"SHA-256", salt, iterations:KDF_ROUNDS}, base, 256)); }
+const aesKey = raw => crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt","decrypt"]);
+async function seal(key, bytes){ const iv = crypto.getRandomValues(new Uint8Array(12)); return {iv:b64(iv), ct:b64(await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, bytes))}; }
+async function unseal(key, box){ return new Uint8Array(await crypto.subtle.decrypt({name:"AES-GCM", iv:unb64(box.iv)}, key, unb64(box.ct))); }
+const newSalt = () => b64(crypto.getRandomValues(new Uint8Array(16)));
+const kekFrom = async (secret, salt) => aesKey(await pbkdf2(secret, unb64(salt)));
+const authPassword = async (email, pw) => "rr1." + b64(await pbkdf2(pw, te.encode("rollout-room/auth/" + email.trim().toLowerCase())));
+const normCode = c => String(c||"").toUpperCase().replace(/[^A-Z0-9]/g, "");
+function newRecoveryCode(){ const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; return [...crypto.getRandomValues(new Uint8Array(24))].map(b => A[b % 32]).join("").match(/.{4}/g).join("-"); }
+
+// A device that chose "stay unlocked" keeps the workspace key in IndexedDB as a non-exportable key.
+function idb(mode, fn){ return new Promise((res, rej) => { const r = indexedDB.open("rollout-room", 1); r.onupgradeneeded = () => r.result.createObjectStore("keys");
+  r.onerror = () => rej(r.error); r.onsuccess = () => { const tx = r.result.transaction("keys", mode); const q = fn(tx.objectStore("keys")); tx.oncomplete = () => res(q?.result); tx.onerror = () => rej(tx.error); }; }); }
+const deviceKeys = { get: uid => idb("readonly", s => s.get(uid)).catch(() => null), put: (uid, k) => idb("readwrite", s => s.put(k, uid)).catch(() => {}), del: uid => idb("readwrite", s => s.delete(uid)).catch(() => {}) };
+
+async function keyRow(){ const { data, error } = await S.sb.from("rollout_keys").select("*").eq("user_id", S.uid).maybeSingle(); if(error) throw error; return data; }
+async function createKeys(password){
+  const raw = crypto.getRandomValues(new Uint8Array(32)); const code = newRecoveryCode(); const pwSalt = newSalt(), rcSalt = newSalt();
+  const row = { user_id:S.uid, pw_salt:pwSalt, pw_box: await seal(await kekFrom(password, pwSalt), raw), rc_salt:rcSalt, rc_box: await seal(await kekFrom(normCode(code), rcSalt), raw) };
+  const { error } = await S.sb.from("rollout_keys").upsert(row); if(error) throw error;
+  return { key: await aesKey(raw), code };
+}
+async function rewrapPassword(raw, password){
+  const pwSalt = newSalt(); const { error } = await S.sb.from("rollout_keys").update({ pw_salt:pwSalt, pw_box: await seal(await kekFrom(password, pwSalt), raw) }).eq("user_id", S.uid); if(error) throw error;
+}
+async function useKey(key, remember){ S.key = key; if(remember) await deviceKeys.put(S.uid, key); else await deviceKeys.del(S.uid); }
+
+async function loadWorkspace(){
+  const sb = S.sb, uid = S.uid, key = S.key;
+  const { data, error } = await sb.from("rollout_docs").select("id,data").limit(5000);
+  if(error){ toast("Couldn't load your workspace. Refresh to try again."); return false; }
+  const docs = new Map(); let bad = 0;
+  for(const r of data){ try{ docs.set(r.id, JSON.parse(td.decode(await unseal(key, r.data)))); }catch{ bad++; } }
+  if(data.length && bad === data.length) return false;
+  if(bad) toast(`${bad} item${bad===1?"":"s"} couldn't be unlocked.`);
+  S.docs = docs; S.mode = "cloud";
+  S.col = { doc: id => ({
+    set: async d => { const box = await seal(key, te.encode(JSON.stringify(d))); const { error } = await sb.from("rollout_docs").upsert({ user_id: uid, id, data: box, updated_at: new Date().toISOString() }); if(error) throw {code:"unavailable"}; },
+    delete: async () => { const { error } = await sb.from("rollout_docs").delete().eq("user_id", uid).eq("id", id); if(error) throw {code:"unavailable"}; }
+  }) };
+  S.kits = {
+    save: async d => { const { error } = await sb.from("media_kits").upsert({ user_id: uid, code: d.code, data: d, updated_at: new Date().toISOString() }); if(error) throw {code:"unavailable"}; },
+    remove: async () => { await sb.from("media_kits").delete().eq("user_id", uid); }
+  };
+  S.sample = { json: aiCall, limits: async () => ({ images:{ maxCount:3, mediaTypes:["image/jpeg","image/png","image/webp","image/gif"] } }) };
+  S.canImg = true; $("#imgPick").accept = "image/jpeg,image/png,image/webp,image/gif";
+  S.ready = true; UI.auth = null; UI.authErr = null;
+  if(!S.docs.get("profile")?.onboarded && !UI.wiz && !S.sampleMode) startWizard();
+  render(true); return true;
+}
+async function unlockWith(password, remember){
+  const row = await keyRow();
+  if(!row){ const { key, code } = await createKeys(password); await useKey(key, remember); await loadWorkspace(); UI.rc = code; UI.auth = "recovery-show"; render(); return; }
+  let raw; try{ raw = await unseal(await kekFrom(password, row.pw_salt), row.pw_box); }catch{ UI.auth = "unlock"; UI.authErr = "That password doesn't unlock this workspace."; render(); return; }
+  await useKey(await aesKey(raw), remember);
+  if(!(await loadWorkspace())){ UI.auth = "unlock"; UI.authErr = "This workspace couldn't be unlocked."; render(); }
+}
+function clearSession(){ S.uid = null; S.key = null; S.me = null; S.docs = new Map(); S.mode = "local"; S.sample = null; S.kits = null; S.col = null; S.canImg = false; }
+
+async function onAuth(event, session){
+  if(event === "PASSWORD_RECOVERY"){ S.uid = session.user.id; S.me = {name:"", email:session.user.email}; UI.auth = "reset"; UI.authErr = null; S.ready = true; render(); return; }
+  const uid = session?.user?.id || null;
+  if(!uid){ clearSession(); if(!["signup","signin","confirm","forgot","forgotSent"].includes(UI.auth)) UI.auth = null; S.ready = true; render(true); return; }
+  if(S.busyAuth || (uid === S.uid && S.key) || UI.auth === "reset" || UI.auth === "reset-fresh") return;
+  S.uid = uid; S.me = {name:"", email:session.user.email};
+  const stored = await deviceKeys.get(uid);
+  if(stored){ S.key = stored; if(await loadWorkspace()) return; S.key = null; await deviceKeys.del(uid); }
+  UI.auth = "unlock"; S.ready = true; render();
+}
+
 async function bootSupabase(){
   const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
   S.sb = sb;
   if(hashKit){ const { data, error } = await sb.rpc("get_media_kit", { kit_code: hashKit }); UI.kitView = !error && data ? data : "missing"; render(); }
-  let current = undefined;
-  const apply = async session => {
-    const uid = session?.user?.id || null;
-    if(uid === current) return; current = uid;
-    if(!uid){ S.uid = null; S.docs = new Map(); S.mode = "local"; S.sample = null; S.kits = null; S.col = null; S.canImg = false; S.ready = true; render(true); return; }
-    S.uid = uid; S.me = { name:"", email: session.user.email };
-    const { data, error } = await sb.from("rollout_docs").select("id,data").limit(5000);
-    if(error) toast("Couldn't load your workspace. Refresh to try again.");
-    S.docs = new Map((data || []).map(r => [r.id, r.data])); S.mode = "cloud";
-    S.col = { doc: id => ({
-      set: async d => { const { error } = await sb.from("rollout_docs").upsert({ user_id: uid, id, data: d, updated_at: new Date().toISOString() }); if(error) throw {code:"unavailable"}; },
-      delete: async () => { const { error } = await sb.from("rollout_docs").delete().eq("user_id", uid).eq("id", id); if(error) throw {code:"unavailable"}; }
-    }) };
-    S.kits = {
-      save: async d => { const { error } = await sb.from("media_kits").upsert({ user_id: uid, code: d.code, data: d, updated_at: new Date().toISOString() }); if(error) throw {code:"unavailable"}; },
-      remove: async () => { await sb.from("media_kits").delete().eq("user_id", uid); }
-    };
-    S.sample = { json: aiCall, limits: async () => ({ images:{ maxCount:3, mediaTypes:["image/jpeg","image/png","image/webp","image/gif"] } }) };
-    S.canImg = true; $("#imgPick").accept = "image/jpeg,image/png,image/webp,image/gif";
-    S.ready = true; UI.signin = false; UI.signinSent = null;
-    if(!S.docs.get("profile")?.onboarded && !UI.wiz && !S.sampleMode) startWizard();
-    render(true);
-  };
-  const { data:{ session } } = await sb.auth.getSession();
-  await apply(session);
-  sb.auth.onAuthStateChange((_event, session) => { setTimeout(() => apply(session), 0); });
+  sb.auth.onAuthStateChange((event, session) => { setTimeout(() => onAuth(event, session).catch(() => { S.ready = true; toast("Something went wrong. Refresh to try again."); render(); }), 0); });
 }
+
+// Runs an account action with the form locked and errors shown on the form.
+async function authStep(fn){
+  UI.busy.auth = true; UI.authErr = null; S.busyAuth = true; render(true);
+  try{ await fn(); }catch(e){ UI.authErr = e?.userMessage || "Something went wrong. Check your connection and try again."; }
+  S.busyAuth = false; UI.busy.auth = false; render(true);
+}
+const fail = msg => { throw {userMessage: msg}; };
+const authVal = id => document.getElementById(id)?.value ?? "";
+function newPasswordPair(){ const pw = authVal("au_pw"), pw2 = authVal("au_pw2"); if(pw.length < 10) fail("Use at least 10 characters."); if(pw !== pw2) fail("The two passwords don't match."); return pw; }
+const siteUrl = () => location.origin + location.pathname;
 
 if(MODE !== "supabase") loadLocal();
 S.ready = MODE === "local";
