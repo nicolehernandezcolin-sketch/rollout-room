@@ -113,7 +113,7 @@ textarea{resize:vertical;min-height:84px;line-height:1.5}
 .land .lede{font-size:1.1rem;color:var(--ink-2);max-width:34ch;margin-top:16px}
 .land .ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
 .loop{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
-.loop div{padding:14px 18px;display:grid;grid-template-columns:110px 1fr;gap:12px;border-top:1px solid var(--line)}
+.loop div{padding:14px 18px;display:grid;grid-template-columns:120px 1fr;gap:12px;border-top:1px solid var(--line)}
 .loop div:first-child{border-top:0}
 .loop b{font-family:var(--display)}
 @media (max-width:760px){.land{grid-template-columns:1fr;gap:28px;padding-block:24px}}
@@ -362,12 +362,12 @@ function sampleWorkspace(){
   m.set("v_s2",{title:"Studio session B-roll", type:"Video", era:"Chapter I", notes:"About 20 min of raw footage: vocals, laughing, the synth part.", link:""});
   m.set("v_s3",{title:"Cover shoot — 14 stills", type:"Photo set", era:"Chapter II", notes:"Red-gel set and a black-and-white set.", link:""});
   m.set("v_s4",{title:"Live at The Echo", type:"Video", era:"Chapter II", notes:"Crowd singing the bridge back.", link:""});
-  m.set("p_s1",{platform:"ig", date:d(0), time:"19:00", format:"Reel", vaultId:"v_s1", status:"approved", caption:"Layer one. We made this before anyone was watching.\n\nWhich layer are you on?", hashtags:["#layers","#altpop","#newmusic"], notes:"Pillar: Chapter re-release", suggestions:[]});
+  m.set("p_s1",{platform:"ig", date:d(0), time:"19:00", format:"Reel", vaultId:"v_s1", status:"approved", group:"g_s1", caption:"Layer one. We made this before anyone was watching.\n\nWhich layer are you on?", hashtags:["#layers","#altpop","#newmusic"], notes:"Pillar: Chapter re-release", suggestions:[]});
   m.set("p_s2",{platform:"tt", date:d(0), time:"20:30", format:"Video", vaultId:"v_s2", status:"draft", caption:"", hashtags:[], notes:"Pillar: Fan-lens edits. Idea: POV text over the laughing take.", suggestions:[
     {hook:"pov: you found the studio footage nobody talks about", caption:"this era was so underrated", hashtags:["#layers","#studiosession","#underratedartist"], why:"Fan-account framing gets shared more than first-person promo; your TikTok videos average 2× the reach of photo posts."},
     {hook:"the take we almost deleted", caption:"keeping this one forever", hashtags:["#layers","#bts","#newartist"], why:"Outtake framing invites comments, your second-strongest engagement signal on TikTok."}]});
   m.set("p_s3",{platform:"ig", date:d(2), time:"18:30", format:"Carousel", vaultId:"v_s3", status:"draft", caption:"Two sets, one story. Look closer at slide 7.", hashtags:["#layers","#conceptart"], notes:"Pillar: Lore drops", suggestions:[]});
-  m.set("p_s5",{platform:"x", date:d(1), time:"12:30", format:"Thread", vaultId:"v_s1", status:"draft", caption:"LAYERS came out before anyone was listening.\n---\nSo we're telling it again, one layer at a time. Chapter I starts tonight.", hashtags:["#LAYERS"], notes:"Pillar: Chapter re-release", suggestions:[]});
+  m.set("p_s5",{platform:"x", date:d(0), time:"12:30", format:"Thread", vaultId:"v_s1", status:"draft", group:"g_s1", caption:"LAYERS came out before anyone was listening.\n---\nSo we're telling it again, one layer at a time. Chapter I starts tonight.", hashtags:["#LAYERS"], notes:"Pillar: Chapter re-release", suggestions:[]});
   m.set("p_s4",{platform:"yt", date:d(3), time:"17:00", format:"Short", vaultId:"v_s4", status:"draft", caption:"", hashtags:[], notes:"Pillar: Live moments", suggestions:[]});
   return m;
 }
@@ -566,16 +566,17 @@ function vLanding(){
     <div>
       <span class="label">For artists, musicians and creatives</span>
       <h1 style="margin-top:12px">Post less.<br>Mean more.</h1>
-      <p class="lede">Set a goal. Connect your accounts. Get a posting plan built from your own numbers, approve every post yourself, and share a media kit that shows partners where you stand.</p>
+      <p class="lede">Make it once, post it everywhere. Rollout Room turns one post into versions for Instagram, TikTok, YouTube and X, schedules each at that platform's best time, and posts them all once you approve. Then your numbers show what worked, so you can post less and mean more.</p>
       <div class="ctas"><button class="btn primary lg" data-act="startWiz">Create your workspace</button><button class="btn lg" data-act="sample">Look around with a sample creator</button></div>
       <p class="muted small" style="margin-top:14px">${MODE==="claude" ? "" : MODE==="supabase" ? `Already have an account? <button class="btn ghost sm" data-act="authGo" data-to="signin" style="padding:0 4px">Sign in</button>` : "Your workspace is saved in this browser."}</p>
       <p class="muted small" style="margin-top:6px;max-width:44ch">${privacyShort()}</p>
     </div>
     <div class="loop">
+      <div><b>Post everywhere</b><span class="muted">One post becomes a version for every platform, each in the right format and length. Approve once and they all go out automatically.<br><span class="small">Auto-posting is simulated in this demo while the platform connections are approved.</span></span></div>
       <div><b>Goal</b><span class="muted">10,000 followers by Dec 31. The app works out the daily pace you need.</span></div>
       <div><b>Data</b><span class="muted">Instagram, TikTok, YouTube and X numbers in one place, separately and together.</span></div>
       <div><b>Plan</b><span class="muted">How often to post on each platform, which formats work and when, based on your own results.</span></div>
-      <div><b>Approve</b><span class="muted">Drafts wait for you. Write your own captions; Claude only suggests.</span></div>
+      <div><b>Approve</b><span class="muted">Nothing posts until you say so. Write your own captions; Claude only suggests.</span></div>
       <div><b>Pitch</b><span class="muted">A live media kit for brands, venues and sponsors.</span></div>
     </div>
   </section>`;
@@ -793,12 +794,23 @@ function effStatus(x){
   if(x.status === "scheduled" && profile()?.connections?.[x.platform] === "demo" && (x.date+" "+(x.time||"23:59")) < (today()+" "+new Date().toTimeString().slice(0,5))) return "published";
   return x.status;
 }
+/* ---------- multi-platform drops ---------- */
+const BLOCK_TIME = {Morning:"09:00", Midday:"12:30", Afternoon:"16:00", Evening:"19:00", Late:"22:30"};
+function bestTimeFor(k){ const b = profile()?.connections?.[k] ? bestSlot([k]) : null; return b ? BLOCK_TIME[b.block] : null; }
+function mapFormat(fmt, k){
+  const kind = /Reel|Video|Short/.test(fmt||"") ? "video" : /Carousel|Photo|Image/.test(fmt||"") ? "image" : /Thread/.test(fmt||"") ? "thread" : "text";
+  const pick = {video:{ig:"Reel",tt:"Video",yt:"Short",th:"Text",x:"Video",fb:"Reel"}, image:{ig:"Carousel",tt:"Photo carousel",yt:"Short",th:"Photo",x:"Image",fb:"Photo"},
+    thread:{ig:"Carousel",tt:"Video",yt:"Short",th:"Text",x:"Thread",fb:"Photo"}, text:{ig:"Photo",tt:"Video",yt:"Short",th:"Text",x:"Text",fb:"Photo"}};
+  return pick[kind][k] || (FORMATS[k]||[""])[0];
+}
+const siblings = x => x.group ? posts().filter(p => p.group === x.group) : [x];
 function postRow(x){
   const st = effStatus(x); const late = st!=="published" && x.date < today();
   const v = x.vaultId ? D().get(x.vaultId) : null;
   return `<div class="post">
     <div class="meta"><span class="plat">${dot(x.platform)} ${pname(x.platform)}</span><span class="pill ${late?"late":st}">${late?"Missed":st==="draft"?"Needs approval":st}</span>
-      <span class="muted mono">${x.date?fmtDay(x.date):"No date"}${x.time?" · "+esc(x.time):""}</span>${x.format?`<span class="muted">· ${esc(x.format)}</span>`:""}${v?`<span class="muted">· ${esc(v.title)}</span>`:""}</div>
+      <span class="muted mono">${x.date?fmtDay(x.date):"No date"}${x.time?" · "+esc(x.time):""}</span>${x.format?`<span class="muted">· ${esc(x.format)}</span>`:""}${v?`<span class="muted">· ${esc(v.title)}</span>`:""}
+      ${siblings(x).length>1?`<span class="pill" title="${esc(siblings(x).map(p=>pname(p.platform)).join(", "))}">${siblings(x).map(p=>dot(p.platform)).join("")} ${siblings(x).length}-platform drop</span>`:""}</div>
     <div class="cap ${x.caption?"":"none"}">${x.caption ? esc(x.caption) : (x.notes ? esc(x.notes) : "No caption yet")}</div>
     ${x.hashtags?.length?`<div class="tags">${esc(x.hashtags.join(" "))}</div>`:""}
     <div class="actions">
@@ -828,6 +840,12 @@ function composer(x){
         <span class="small" id="c_count">${countHtml(x.platform, x.format, x.caption, x.hashtags)}</span>
         <label class="field">Hashtags<input type="text" id="c_tags" value="${esc((x.hashtags||[]).join(" "))}" placeholder="#yourworld #genre"></label>
         <label class="field">Notes / idea<input type="text" id="c_notes" value="${esc(x.notes||"")}"></label>
+        ${(() => { const sib = siblings(x); const inGroup = new Set(sib.map(p=>p.platform)); const more = (p.platforms||[]).filter(k => !inGroup.has(k));
+          const drafts = sib.filter(p => effStatus(p)==="draft");
+          return `<div class="sugg"><span class="h">Post everywhere</span>
+            ${sib.length>1?`<span class="small">This drop goes to ${sib.map(p => p.id===x.id ? `<b>${dot(p.platform)} ${pname(p.platform)}</b>` : `<button class="btn ghost sm" data-act="open" data-id="${p.id}" style="padding:0 4px">${dot(p.platform)} ${pname(p.platform)} · ${esc(p.time||"")}</button>`).join(" ")}</span>`:`<span class="small muted">Make a version of this post for your other platforms. Each one gets the right format and its platform's best time.</span>`}
+            ${more.length?`<div class="row">${more.map(k => `<button class="btn sm" data-act="addPlatform" data-id="${x.id}" data-k="${k}">+ ${pname(k)}</button>`).join("")}${more.length>1?`<button class="btn sm" data-act="addAllPlatforms" data-id="${x.id}">+ All</button>`:""}</div>`:""}
+            ${sib.length>1&&drafts.length?`<div><button class="btn primary sm" data-act="approveDrop" data-id="${x.id}">Approve all ${drafts.length} version${drafts.length===1?"":"s"}</button></div>`:""}</div>`; })()}
         <p class="route">${dot(x.platform)} ${mode==="demo" ? `When scheduled: ${esc(PLATFORMS[x.platform].route)} <span class="demo-tag">simulated</span>` : `Not connected: you'll copy the caption and post it yourself.`}</p>
         <div class="row"><button class="btn primary" data-act="saveDraft" data-id="${x.id}">Save</button>
           ${x.status==="draft"?`<button class="btn" data-act="saveApprove" data-id="${x.id}">Save and approve</button>`:""}
@@ -1211,6 +1229,20 @@ document.addEventListener("click", async ev => {
     case "open": if(UI.open && UI.open !== id) collectComposer(UI.open); UI.open = id; UI.img = null; render(); window.scrollTo({top:0, behavior:"smooth"}); break;
     case "close": collectComposer(UI.open); UI.open = null; render(); break;
     case "saveDraft": collectComposer(id); UI.open = null; render(); toast("Saved"); break;
+    case "addPlatform": case "addAllPlatforms": {
+      collectComposer(id); const cur = clone(D().get(id)); const group = cur.group || rid("g");
+      if(!cur.group){ cur.group = group; put(id, cur); }
+      const have = new Set(siblings({...cur, id}).map(p=>p.platform));
+      const targets = a === "addPlatform" ? [b.dataset.k] : (profile().platforms||[]).filter(k => !have.has(k));
+      targets.forEach(k => put(rid("p"), {...cur, platform:k, format:mapFormat(cur.format, k), time:bestTimeFor(k) || cur.time, status:"draft", suggestions:[], group}));
+      toast(targets.length===1 ? `Added a ${pname(targets[0])} version. Open it to tailor the caption.` : `Added ${targets.length} versions. Open each to tailor the caption.`);
+      break; }
+    case "approveDrop": {
+      collectComposer(id); const sib = siblings({...D().get(id), id}).filter(p => effStatus(p)==="draft");
+      const blocked = sib.filter(p => !p.caption || overLimit(p));
+      sib.filter(p => !blocked.includes(p)).forEach(({id:pid, ...rest}) => put(pid, {...clone(rest), status:"approved"}));
+      toast(blocked.length ? `Approved ${sib.length-blocked.length}. ${blocked.map(p=>pname(p.platform)).join(", ")} still need${blocked.length===1?"s":""} a caption that fits.` : "All versions approved");
+      break; }
     case "saveApprove": { collectComposer(id); const cur = D().get(id); if(!cur.caption){ toast("Write or pick a caption before approving."); return; } if(overLimit(cur)){ toast(`Too long for ${pname(cur.platform)}. Trim it before approving.`); return; } put(id, {...clone(cur), status:"approved"}); UI.open = null; render(); toast("Approved"); break; }
     case "approve": if(overLimit(x)){ toast(`Too long for ${pname(x.platform)}. Open it and trim it first.`); return; } put(id, {...clone(x), status:"approved"}); toast("Approved"); break;
     case "schedule": if(profile().connections?.[x.platform]==="demo"){ put(id, {...clone(x), status:"scheduled"}); toast(`Scheduled (simulated): ${PLATFORMS[x.platform].route.toLowerCase()}`); } else { put(id, {...clone(x), status:"published", publishedAt:Date.now()}); toast("Marked posted"); } break;

@@ -12,6 +12,7 @@ The aim is quality over quantity: post on a cadence your numbers say works and y
 - **Dashboard**: goal progress (needed pace vs. your pace), combined followers, reach and engagement, a card for each platform, and plain-language insights from your data.
 - **Analytics**: followers over time, best days and times, the posting cadence that stops paying off, formats compared, top posts, and audience age, gender and cities.
 - **Plan**: Claude reads your numbers and your time budget, then writes a cadence for each platform, content pillars, world-building rules, experiments and a runway to your next launch.
+- **Post everywhere**: turn one post into versions for Instagram, TikTok, YouTube and X, each in the right format and scheduled at that platform's best time, then approve them all at once. Auto-posting is simulated until the platform connections are approved.
 - **Queue**: you write the captions. Claude's suggestions are optional starting points. Nothing is approved until you approve it. X posts get a 280-character counter and can be written as threads.
 - **Vault**: the footage and photos you already have, ready to bring back with a new angle.
 - **Media kit**: your numbers fill in automatically. Share it as a link or copy it as text for an email.
