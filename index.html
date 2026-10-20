@@ -526,7 +526,7 @@ function vLanding(){
       <h1 style="margin-top:12px">Post less.<br>Mean more.</h1>
       <p class="lede">Set a goal. Connect your accounts. Get a posting plan built from your own numbers, approve every post yourself, and share a media kit that shows partners where you stand.</p>
       <div class="ctas"><button class="btn primary lg" data-act="startWiz">Create your workspace</button><button class="btn lg" data-act="sample">Look around with a sample creator</button></div>
-      <p class="muted small" style="margin-top:14px">${MODE==="claude" ? (S.me?.name ? `You'll sign up as ${esc(S.me.name)} using your Claude account. No new password needed.` : "You sign up with your Claude account. No new password needed.") : MODE==="supabase" ? "Sign up with your email. No password needed." : "Your workspace is saved in this browser."}</p>
+      <p class="muted small" style="margin-top:14px">${MODE==="claude" ? "No password needed." : MODE==="supabase" ? "Sign up with your email. No password needed." : "Your workspace is saved in this browser."}</p>
       <p class="muted small" style="margin-top:6px;max-width:44ch">${PRIVACY_SHORT}</p>
     </div>
     <div class="loop">
@@ -1012,7 +1012,7 @@ Return ONLY JSON: {"options":[{"hook":"first words on screen or first line","cap
 
 /* ================= actions ================= */
 function startWizard(){
-  UI.draft = {name:S.me?.name||"", creatorType:"Musician", world:"", audience:"", tone:"", goal:10000, goalDate:`${new Date().getFullYear()}-12-31`, goalPlatform:"ig", why:[], campaign:"", platforms:["ig","tt","x"], handles:{}, connections:{ig:"demo",tt:"demo",x:"demo"}, hours:6, enjoy:[]};
+  UI.draft = {name:"", creatorType:"Musician", world:"", audience:"", tone:"", goal:10000, goalDate:`${new Date().getFullYear()}-12-31`, goalPlatform:"ig", why:[], campaign:"", platforms:["ig","tt","x"], handles:{}, connections:{ig:"demo",tt:"demo",x:"demo"}, hours:6, enjoy:[]};
   UI.wiz = 1;
 }
 async function copyText(text, msg="Copied"){
