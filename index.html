@@ -1,0 +1,1230 @@
+<!--standalone-head--><!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A calmer way to run your socials: one dashboard, a plan built from your own numbers, and posts you approve.">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.118.0/dist/umd/supabase.min.js"></script>
+<!--/standalone-head-->
+<title>Rollout Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+:root{
+  --ground:#E9ECF1; --surface:#FFFFFF; --sunk:#DEE2E9; --ink:#14161B; --ink-2:#585E6B; --line:#CBD0D9;
+  --accent:#2B44F0; --accent-ink:#FFFFFF; --accent-soft:#DDE2FF;
+  --warn:#B93C0B; --warn-soft:#FBE4D6; --ok:#13773A; --ok-soft:#D8F0E0;
+  --c-ig:#2a78d6; --c-tt:#eb6834; --c-yt:#1baf7a; --c-th:#eda100; --c-x:#e87ba4; --c-fb:#008300;
+  --seq-1:#cde2fb; --seq-2:#9ec5f4; --seq-3:#6da7ec; --seq-4:#3987e5; --seq-5:#256abf; --seq-6:#184f95;
+  --display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body:"Instrument Sans", "Helvetica Neue", "Segoe UI", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --ground:#0E1014; --surface:#171A20; --sunk:#20242C; --ink:#E8EBF1; --ink-2:#9BA2AF; --line:#2D323C;
+    --accent:#8296FF; --accent-ink:#0B0D12; --accent-soft:#222A52;
+    --warn:#FB9A5C; --warn-soft:#3A2416; --ok:#5BDB8A; --ok-soft:#14301F;
+    --c-ig:#3987e5; --c-tt:#d95926; --c-yt:#199e70; --c-th:#c98500; --c-x:#d55181; --c-fb:#008300;
+    --seq-1:#1c2533; --seq-2:#104281; --seq-3:#184f95; --seq-4:#256abf; --seq-5:#3987e5; --seq-6:#86b6ef;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --ground:#0E1014; --surface:#171A20; --sunk:#20242C; --ink:#E8EBF1; --ink-2:#9BA2AF; --line:#2D323C;
+  --accent:#8296FF; --accent-ink:#0B0D12; --accent-soft:#222A52;
+  --warn:#FB9A5C; --warn-soft:#3A2416; --ok:#5BDB8A; --ok-soft:#14301F;
+  --c-ig:#3987e5; --c-tt:#d95926; --c-yt:#199e70; --c-th:#c98500; --c-x:#d55181; --c-fb:#008300;
+  --seq-1:#1c2533; --seq-2:#104281; --seq-3:#184f95; --seq-4:#256abf; --seq-5:#3987e5; --seq-6:#86b6ef;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+html,body{min-height:100%}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;padding:0 16px 72px}
+.wrap{max-width:1100px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;margin:0;line-height:1.15}
+h2{font-size:1.45rem;font-weight:700}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0}
+a{color:var(--accent)}
+.muted{color:var(--ink-2)}
+.small{font-size:.85rem}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.label{font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* header */
+.top{display:flex;justify-content:space-between;align-items:center;gap:16px;padding-block:20px 12px;flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:800;font-size:1.3rem;letter-spacing:-.02em}
+.logo svg{flex:none}
+.who{display:flex;align-items:center;gap:10px;font-size:.85rem}
+.demo-tag{font-size:.7rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--warn-soft);color:var(--warn);padding:3px 8px;border-radius:5px}
+nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--ground);display:flex;gap:4px;overflow-x:auto;padding-block:8px;border-bottom:1px solid var(--line);margin-bottom:22px;scrollbar-width:none}
+nav button{border:0;background:none;padding:8px 14px;border-radius:999px;cursor:pointer;font-weight:600;color:var(--ink-2);white-space:nowrap}
+nav button[aria-current="true"]{background:var(--ink);color:var(--ground)}
+nav .count{font-family:var(--mono);font-size:.72rem;margin-left:6px;opacity:.75}
+
+/* generic */
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.stack{display:flex;flex-direction:column;gap:14px}
+.stack-lg{display:flex;flex-direction:column;gap:24px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.spread{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:860px){.grid4{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px){.grid2,.grid3{grid-template-columns:1fr}}
+@media (max-width:420px){.grid4{grid-template-columns:1fr}}
+.btn{border:1px solid var(--line);background:var(--surface);padding:8px 14px;border-radius:8px;cursor:pointer;font-weight:600;font-size:.88rem;white-space:nowrap}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{background:none;border-color:transparent;color:var(--ink-2)}
+.btn.ghost:hover{color:var(--ink);border-color:var(--line)}
+.btn.danger{color:var(--warn);border-color:var(--warn)}
+.btn.lg{padding:12px 20px;font-size:1rem}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:5px 10px;font-size:.8rem}
+label.field{display:flex;flex-direction:column;gap:5px;font-weight:600;font-size:.85rem}
+label.field .hint,.hint{font-weight:400;color:var(--ink-2);font-size:.8rem}
+input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:9px 11px;width:100%;font-weight:400}
+input[type=range]{width:100%;accent-color:var(--accent)}
+textarea{resize:vertical;min-height:84px;line-height:1.5}
+.banner{display:flex;gap:14px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--accent-soft);border-radius:var(--r);padding:12px 16px}
+.banner.warn{background:var(--warn-soft)}
+.empty{padding:28px;text-align:center;color:var(--ink-2);border:1px dashed var(--line);border-radius:var(--r)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:.72rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2);white-space:nowrap}
+.pill.approved,.pill.scheduled{background:var(--accent-soft);border-color:transparent;color:var(--accent)}
+.pill.published{background:var(--ok-soft);border-color:transparent;color:var(--ok)}
+.pill.late{background:var(--warn-soft);border-color:transparent;color:var(--warn)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:.85rem}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--ground);border-color:var(--ink)}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
+.plat{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:.85rem}
+
+/* landing */
+.land{display:grid;grid-template-columns:1.15fr .85fr;gap:40px;align-items:center;padding-block:40px 30px}
+.land h1{font-size:clamp(2.2rem,6vw,3.8rem);font-weight:800;letter-spacing:-.035em;line-height:1}
+.land .lede{font-size:1.1rem;color:var(--ink-2);max-width:34ch;margin-top:16px}
+.land .ctas{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.loop{display:flex;flex-direction:column;gap:0;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.loop div{padding:14px 18px;display:grid;grid-template-columns:110px 1fr;gap:12px;border-top:1px solid var(--line)}
+.loop div:first-child{border-top:0}
+.loop b{font-family:var(--display)}
+@media (max-width:760px){.land{grid-template-columns:1fr;gap:28px;padding-block:24px}}
+.steps{display:flex;gap:6px;margin-bottom:6px}
+.steps i{height:4px;flex:1;border-radius:2px;background:var(--sunk)}
+.steps i.on{background:var(--accent)}
+.wizard{max-width:720px;margin:20px auto 0}
+
+/* kpis */
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.kpi b{font-family:var(--display);font-size:1.7rem;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi .d{font-size:.8rem;font-family:var(--mono)}
+.up{color:var(--ok)} .down{color:var(--warn)}
+.goalbar{display:grid;grid-template-columns:repeat(10,1fr);gap:3px}
+.goalbar div{height:14px;border-radius:3px;background:var(--sunk);position:relative;overflow:hidden}
+.goalbar i{position:absolute;inset:0 auto 0 0;background:var(--accent)}
+.pcard{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.pcard .big{font-family:var(--display);font-weight:800;font-size:1.35rem;font-variant-numeric:tabular-nums}
+.kv{display:grid;grid-template-columns:1fr auto;gap:2px 10px;font-size:.84rem}
+.kv span:nth-child(even){font-family:var(--mono);text-align:right}
+.insight{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+.insight b{font-family:var(--display);font-size:1.02rem;font-weight:700;line-height:1.3}
+.insight .src{font-size:.75rem;color:var(--ink-2);font-family:var(--mono)}
+
+/* charts */
+.chart-wrap{position:relative}
+.chart{width:100%;height:auto;display:block;overflow:visible}
+.tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--ground);padding:8px 10px;border-radius:6px;font-size:.78rem;line-height:1.45;white-space:nowrap;z-index:3;transform:translate(-50%,-100%)}
+.tip .mono{font-weight:600}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;color:var(--ink-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.heat{display:grid;grid-template-columns:72px repeat(7,minmax(0,1fr));gap:3px;font-size:.75rem}
+.heat .c{height:30px;border-radius:4px}
+.heat .h{color:var(--ink-2);display:flex;align-items:center}
+.heat .dh{color:var(--ink-2);text-align:center}
+.hbar{display:grid;grid-template-columns:minmax(80px,140px) 1fr auto;gap:8px 10px;align-items:center;font-size:.85rem}
+.hbar .t{height:14px;background:var(--sunk);border-radius:0 4px 4px 0}
+.hbar .t i{display:block;height:100%;border-radius:0 4px 4px 0;background:var(--seq-4)}
+.hbar .t i.rec{background:var(--accent)}
+.table-wrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.86rem}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2);font-weight:600}
+td.num,th.num{text-align:right;font-family:var(--mono)}
+
+/* queue */
+.post{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.post .meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:.82rem}
+.post .cap{white-space:pre-wrap;font-size:.92rem}
+.post .cap.none{color:var(--ink-2);font-style:italic}
+.post .tags{font-family:var(--mono);font-size:.78rem;color:var(--accent);word-break:break-word}
+.route{font-size:.8rem;color:var(--ink-2);display:flex;gap:6px;align-items:center}
+.actions{display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px;margin-top:2px}
+.composer{display:grid;grid-template-columns:1.2fr .8fr;gap:18px}
+@media (max-width:860px){.composer{grid-template-columns:1fr}}
+.sugg{background:var(--ground);border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:6px}
+.sugg .h{font-weight:700}
+.sugg .c{white-space:pre-wrap;font-size:.88rem}
+.daygroup{display:flex;flex-direction:column;gap:10px}
+.daygroup + .daygroup{margin-top:18px}
+.vitem{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;display:flex;flex-direction:column;gap:8px}
+
+/* plan */
+.strat section{display:flex;flex-direction:column;gap:10px}
+.strat section + section{margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+.strat ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px}
+.rw{display:grid;grid-template-columns:160px 1fr;gap:14px;padding:12px;background:var(--ground);border-radius:8px}
+@media (max-width:560px){.rw{grid-template-columns:1fr}}
+
+/* kit */
+.kit{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:28px;display:flex;flex-direction:column;gap:22px}
+.kit h1{font-size:clamp(1.8rem,5vw,2.6rem);font-weight:800;letter-spacing:-.03em}
+.kit .stamp{align-self:flex-start;border:2px solid var(--warn);color:var(--warn);font-weight:800;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;padding:4px 10px;border-radius:4px}
+.kit .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.kit .stats div{background:var(--surface);padding:14px}
+.kit .stats b{display:block;font-family:var(--display);font-size:1.5rem;font-weight:800;font-variant-numeric:tabular-nums}
+@media (max-width:640px){.kit .stats{grid-template-columns:repeat(2,minmax(0,1fr))}.kit{padding:18px}}
+
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--ground);padding:10px 16px;border-radius:8px;font-weight:600;font-size:.88rem;z-index:20;max-width:calc(100% - 32px)}
+.working{display:inline-flex;align-items:center;gap:8px;color:var(--ink-2);font-size:.88rem}
+.working::before{content:"";width:10px;height:10px;border-radius:2px;background:var(--accent);animation:pulse 1s ease-in-out infinite alternate}
+@keyframes pulse{from{opacity:.25;transform:translateY(2px)}to{opacity:1;transform:translateY(-2px)}}
+@media (prefers-reduced-motion:reduce){.working::before{animation:none}}
+.conn{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.conn:first-child{border-top:0}
+.count-ok{color:var(--ink-2)} .count-over{color:var(--warn);font-weight:600}
+.signin{max-width:460px;margin:40px auto 0}
+details summary{cursor:pointer;font-weight:600}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="logo"><svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><rect x="2" y="12" width="22" height="10" rx="3" fill="var(--sunk)"/><rect x="2" y="8" width="22" height="8" rx="3" fill="var(--seq-3)"/><rect x="2" y="4" width="22" height="6" rx="3" fill="var(--accent)"/></svg>Rollout Room</div>
+    <div class="who" id="who"></div>
+  </header>
+  <div id="app"></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<input type="file" id="imgPick" accept="image/*" hidden>
+
+<script>
+(() => {
+const ARTIFACT_URL = "https://claude.ai/artifact/YJRGmuGC9gUqZkH4aEmU3E";
+const PLATFORMS = {
+  ig:{name:"Instagram", api:"Instagram API with Instagram Login", route:"Publishes to Instagram at the scheduled time"},
+  tt:{name:"TikTok", api:"TikTok Content Posting API + Display API", route:"Lands in your TikTok inbox as a draft — add the sound and post in the app"},
+  yt:{name:"YouTube Shorts", api:"YouTube Data API + YouTube Analytics API", route:"Uploads as a Short at the scheduled time"},
+  th:{name:"Threads", api:"Threads API", route:"Publishes to Threads at the scheduled time"},
+  x:{name:"X", api:"X API v2 (needs an X developer account; check X's current API pricing)", route:"Posts to X at the scheduled time; a thread posts as a chain of replies"},
+  fb:{name:"Facebook", api:"Facebook Pages API", route:"Publishes to your Facebook Page at the scheduled time"}
+};
+const PKEYS = Object.keys(PLATFORMS);
+const FORMATS = {ig:["Reel","Carousel","Photo"], tt:["Video","Photo carousel"], yt:["Short"], th:["Text","Photo"], x:["Text","Image","Video","Thread"], fb:["Reel","Photo"]};
+const CREATOR_TYPES = ["Musician","Visual artist","Dancer","Filmmaker","Designer","Photographer","Comedian","Other"];
+const WHY = ["Brand partnerships","Venue bookings","Sponsorships","Launch a project","Grow a community"];
+const ENJOY = ["Short video","Photos","Carousels","Behind the scenes","Talking to camera","Performance clips","Writing"];
+const TABS = [{k:"dash",name:"Dashboard"},{k:"analytics",name:"Analytics"},{k:"plan",name:"Plan"},{k:"queue",name:"Queue"},{k:"vault",name:"Vault"},{k:"kit",name:"Media kit"},{k:"settings",name:"Settings"}];
+const DOW = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const BLOCKS = [{n:"Morning",a:6,b:11},{n:"Midday",a:11,b:15},{n:"Afternoon",a:15,b:18},{n:"Evening",a:18,b:22},{n:"Late",a:22,b:26}];
+const LS = "rollout-room-v2";
+const CFG = window.ROLLOUT_CONFIG || {};
+const MODE = window.claude?.use ? "claude" : (CFG.supabaseUrl && CFG.supabaseKey && window.supabase ? "supabase" : "local");
+const kitLink = code => (MODE === "claude" ? ARTIFACT_URL : location.origin + location.pathname) + "#kit-" + code;
+const LIMITS = {x:280, th:500};
+function captionParts(x){ return x.format === "Thread" ? String(x.caption||"").split(/\n\s*-{3,}\s*\n/) : [String(x.caption||"")]; }
+function overLimit(x){ const lim = LIMITS[x.platform]; if(!lim) return false; const tags = (x.hashtags||[]).join(" "); const parts = captionParts(x);
+  return parts.some((t,i) => (t.length + (i===parts.length-1 && tags ? tags.length+2 : 0)) > lim); }
+function countHtml(platform, format, caption, hashtags){
+  const lim = LIMITS[platform]; if(!lim) return "";
+  const x = {platform, format, caption, hashtags}; const parts = captionParts(x); const tags = (hashtags||[]).join(" ");
+  return parts.map((t,i) => { const n = t.length + (i===parts.length-1 && tags ? tags.length+2 : 0); return `<span class="${n>lim?"count-over":"count-ok"}">${parts.length>1?`Post ${i+1}: `:""}${n}/${lim}${n>lim?" — too long":""}</span>`; }).join(" · ");
+}
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseYmd = s => { const [y,m,d] = String(s).split("-").map(Number); return new Date(y, m-1, d); };
+const addDays = (d,n) => { const x = new Date(d); x.setDate(x.getDate()+n); return x; };
+const today = () => ymd(new Date());
+const fmtDay = s => parseYmd(s).toLocaleDateString(undefined,{weekday:"short", month:"short", day:"numeric"});
+const fmtN = n => Math.round(Number(n)||0).toLocaleString();
+const fmtK = n => { n = Number(n)||0; return n >= 1e6 ? (n/1e6).toFixed(1).replace(/\.0$/,"")+"M" : n >= 1e4 ? Math.round(n/1e3)+"K" : n >= 1e3 ? (n/1e3).toFixed(1).replace(/\.0$/,"")+"K" : String(Math.round(n)); };
+const pct = (n,d=1) => (n*100).toFixed(d)+"%";
+const sgn = n => (n>=0?"+":"−")+fmtN(Math.abs(n));
+const rid = p => p + "_" + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const clone = o => JSON.parse(JSON.stringify(o));
+const sum = a => a.reduce((x,y)=>x+y,0);
+const avg = a => a.length ? sum(a)/a.length : 0;
+const pcolor = k => `var(--c-${k})`;
+const dot = k => `<span class="dot" style="background:${pcolor(k)}"></span>`;
+const pname = k => PLATFORMS[k]?.name || k;
+
+/* ================= sample data generator ================= */
+function hash(s){ let h = 2166136261; for(const c of String(s)){ h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h>>>0; }
+function rng(seed){ let a = seed>>>0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a>>>15, 1|a); t = t + Math.imul(t ^ t>>>7, 61|t) ^ t; return ((t ^ t>>>14)>>>0)/4294967296; }; }
+const PCONF = {
+  ig:{start:3200, reach:850, fmt:{Reel:1.7,Carousel:1.0,Photo:.6}, fol:{Reel:1.15,Carousel:1.0,Photo:.6}, shr:{Reel:.013,Carousel:.008,Photo:.003}, sav:{Reel:.011,Carousel:.027,Photo:.006}, eng:.065},
+  tt:{start:1800, reach:2100, fmt:{Video:1.0,"Photo carousel":.55}, fol:{Video:1.0,"Photo carousel":.7}, shr:{Video:.011,"Photo carousel":.006}, sav:{Video:.007,"Photo carousel":.012}, eng:.075},
+  yt:{start:420, reach:1300, fmt:{Short:1}, fol:{Short:.55}, shr:{Short:.004}, sav:{Short:.002}, eng:.04},
+  th:{start:650, reach:320, fmt:{Text:1,Photo:1.25}, fol:{Text:.8,Photo:1}, shr:{Text:.01,Photo:.006}, sav:{Text:.002,Photo:.003}, eng:.05},
+  x:{start:380, reach:260, fmt:{Text:1,Image:1.2,Video:1.4,Thread:1.3}, fol:{Text:.6,Image:.7,Video:.8,Thread:1.0}, shr:{Text:.012,Image:.01,Video:.009,Thread:.015}, sav:{Text:.002,Image:.003,Video:.003,Thread:.009}, eng:.03},
+  fb:{start:520, reach:220, fmt:{Reel:1.4,Photo:.8}, fol:{Reel:.6,Photo:.4}, shr:{Reel:.01,Photo:.006}, sav:{Reel:.004,Photo:.003}, eng:.04}
+};
+const CITIES = ["Los Angeles","New York","Atlanta","Chicago","Houston","London","Toronto","Mexico City","Miami","Dallas","Philadelphia","São Paulo","Lagos","Berlin"];
+const DAYS = 120;
+const genCache = new Map();
+function genPlatform(k, seedStr){
+  const key = k+"|"+seedStr+"|"+today(); if(genCache.has(key)) return genCache.get(key);
+  const R = rng(hash(key)); const c = PCONF[k];
+  const gauss = () => { let u = 0, v = 0; while(!u) u = R(); while(!v) v = R(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); };
+  const scale = .65 + R()*.8;
+  const end = new Date(); const start = addDays(end, -(DAYS-1));
+  const weeks = Math.ceil(DAYS/7); const pattern = [2,3,5,7,1,4,6,3,2,5,4,3,6,2,4,3,5,4];
+  for(let i=pattern.length-1;i>0;i--){ const j = Math.floor(R()*(i+1)); [pattern[i],pattern[j]] = [pattern[j],pattern[i]]; }
+  const perWeek = Array.from({length:weeks}, (_,w) => Math.max(1, pattern[w % pattern.length] - (k==="yt"||k==="fb"||k==="x" ? 1 : 0)));
+  const fmts = FORMATS[k]; const posts = [];
+  const hourMult = h => h>=18&&h<22 ? 1.3 : h>=11&&h<15 ? 1.0 : h>=15&&h<18 ? 1.08 : h>=22 ? .9 : .72;
+  const dowMult = [1.15,.9,.95,1,1.12,1.05,.94];
+  let followers = c.start*scale*.72; const daily = []; const gainsByDay = new Array(DAYS).fill(0);
+  for(let w=0; w<weeks; w++){
+    const n = perWeek[w]; const days = new Set(); while(days.size < Math.min(n,7)) days.add(Math.floor(R()*7));
+    const fatigue = n <= 3 ? 1 : 1/(1+.2*(n-3));
+    for(const dd of days){
+      const di = w*7+dd; if(di >= DAYS) continue;
+      const date = addDays(start, di); const dow = date.getDay();
+      const hRoll = R(); const hour = hRoll < .45 ? 18+Math.floor(R()*4) : hRoll < .7 ? 11+Math.floor(R()*4) : hRoll < .85 ? 15+Math.floor(R()*3) : hRoll < .93 ? 8+Math.floor(R()*3) : 22+Math.floor(R()*2);
+      const fmt = fmts[Math.floor(R()*fmts.length)];
+      const growthF = Math.sqrt(1 + di/DAYS*.35);
+      let reach = c.reach*scale*growthF*c.fmt[fmt]*hourMult(hour)*dowMult[dow]*fatigue*Math.exp(gauss()*.45);
+      const viral = R() < .035; if(viral) reach *= 3.5 + R()*4;
+      reach = Math.round(reach);
+      const likes = Math.round(reach*c.eng*(.8+R()*.4)); const comments = Math.round(reach*c.eng*.08*(.6+R()*.8));
+      const shares = Math.round(reach*c.shr[fmt]*(.6+R()*.8)); const saves = Math.round(reach*c.sav[fmt]*(.6+R()*.8));
+      const follows = Math.round(reach*.0062*c.fol[fmt]*(.7+R()*.6));
+      posts.push({id:`${k}${di}${dd}`, platform:k, date:ymd(date), hour, dow, format:fmt, reach, likes, comments, shares, saves, follows, viral, perWeek:n});
+      gainsByDay[di] += follows*.6; if(di+1<DAYS) gainsByDay[di+1] += follows*.3; if(di+2<DAYS) gainsByDay[di+2] += follows*.1;
+    }
+  }
+  for(let d=0; d<DAYS; d++){ followers += gainsByDay[d] + (R()*4-1.2)*scale - followers*.00035; daily.push({date:ymd(addDays(start,d)), v:Math.round(followers)}); }
+  const ageBase = {ig:[4,34,38,15,9], tt:[11,43,30,10,6], yt:[8,36,32,14,10], th:[2,30,42,17,9], x:[2,28,40,18,12], fb:[1,14,32,26,27]}[k];
+  const ages = ageBase.map(v => v*(.85+R()*.3)); const at = sum(ages);
+  const cities = CITIES.slice().sort(() => R()-.5).slice(0,5); let rem = 34 + R()*12;
+  const cityShares = cities.map((n,i) => { const s = i===4 ? rem : rem*(.32+R()*.15); rem -= i===4 ? 0 : s; return {name:n, share:s/100}; });
+  const women = .45 + R()*.2;
+  const out = {source:"demo", posts, daily, perWeek, audience:{ages:["13–17","18–24","25–34","35–44","45+"].map((n,i)=>({name:n, share:ages[i]/at})), gender:{women, men:1-women-.03, other:.03}, cities:cityShares}};
+  genCache.set(key, out); return out;
+}
+
+/* ================= store ================= */
+const S = { docs:new Map(), mode:"local", col:null, db:null, uid:null, user:null, sample:null, canImg:false, downloads:null, chains:new Map(), me:null, ready:false, sampleMode:false, sampleDocs:null };
+function loadLocal(){ try{ const raw = localStorage.getItem(LS); if(raw){ for(const [k,v] of Object.entries(JSON.parse(raw))) S.docs.set(k,v); } }catch{} }
+function saveLocal(){ try{ localStorage.setItem(LS, JSON.stringify(Object.fromEntries(S.docs))); }catch{} }
+const D = () => S.sampleMode ? S.sampleDocs : S.docs;
+function serial(id, fn){ const prev = S.chains.get(id) || Promise.resolve(); const next = prev.then(fn, fn); S.chains.set(id, next.catch(()=>{})); return next; }
+function put(id, data){
+  if(S.sampleMode){ S.sampleDocs.set(id, data); render(); return; }
+  S.docs.set(id, data); render();
+  if(S.mode === "cloud") serial(id, () => S.col.doc(id).set(data)).catch(e => toast(saveErr(e)));
+  else saveLocal();
+}
+function del(id){
+  if(S.sampleMode){ S.sampleDocs.delete(id); render(); return; }
+  S.docs.delete(id); render();
+  if(S.mode === "cloud") serial(id, () => S.col.doc(id).delete()).catch(e => toast(saveErr(e)));
+  else saveLocal();
+}
+const saveErr = e => e?.code === "quota_exceeded" ? "Storage is full. Delete some old posts, then try again." :
+  e?.code === "invalid_argument" ? "This change couldn't be saved. Ask the owner of this page for Contributor access." : "Couldn't save that change. Check your connection.";
+const profile = () => D().get("profile") || null;
+const byPrefix = p => [...D().entries()].filter(([k]) => k.startsWith(p)).map(([id,v]) => ({id, ...v}));
+const posts = () => byPrefix("p_").sort((a,b) => ((a.date||"9")+(a.time||"")).localeCompare((b.date||"9")+(b.time||"")));
+const vault = () => byPrefix("v_").sort((a,b) => (a.title||"").localeCompare(b.title||""));
+const checkins = k => byPrefix("g_").filter(g => g.platform === k).sort((a,b) => a.date.localeCompare(b.date));
+
+function sampleWorkspace(){
+  const m = new Map(); const t = new Date(); const d = n => ymd(addDays(t,n));
+  m.set("profile", {name:"Nova Reyes", creatorType:"Musician", platforms:["ig","tt","yt","x"], handles:{ig:"@novareyes", tt:"@novareyes", yt:"@novareyesmusic", x:"@novareyes"},
+    connections:{ig:"demo", tt:"demo", yt:"demo", x:"demo"},
+    world:"LAYERS — a visual project told in chapters. Each release peels back another layer of the same story: mirrors, red light, rooftops at dusk.",
+    audience:"18–30, alt-pop and visual-art fans who love lore and aesthetic edits", tone:"Cinematic, a little cryptic, warm in replies",
+    campaign:"New project launching in January", goal:10000, goalDate:`${t.getFullYear()}-12-31`, goalPlatform:"ig", why:["Brand partnerships","Venue bookings"],
+    hours:6, enjoy:["Short video","Performance clips","Behind the scenes"], onboarded:true,
+    kit:{headline:"Alt-pop artist building LAYERS, a story told in chapters.", offer:"Sponsored Reels and TikToks\nLive sets for venues up to 500 cap\nProduct placement inside music videos", past:"Opened for local headliners at The Echo\nCollab drop with an indie streetwear label", contact:"booking@novareyes.example"}});
+  m.set("v_s1",{title:"LAYERS — music video (full cut)", type:"Video", era:"Chapter I", notes:"3:42. Strongest shots at 0:48 (mirror) and 2:10 (rooftop).", link:""});
+  m.set("v_s2",{title:"Studio session B-roll", type:"Video", era:"Chapter I", notes:"About 20 min of raw footage: vocals, laughing, the synth part.", link:""});
+  m.set("v_s3",{title:"Cover shoot — 14 stills", type:"Photo set", era:"Chapter II", notes:"Red-gel set and a black-and-white set.", link:""});
+  m.set("v_s4",{title:"Live at The Echo", type:"Video", era:"Chapter II", notes:"Crowd singing the bridge back.", link:""});
+  m.set("p_s1",{platform:"ig", date:d(0), time:"19:00", format:"Reel", vaultId:"v_s1", status:"approved", caption:"Layer one. We made this before anyone was watching.\n\nWhich layer are you on?", hashtags:["#layers","#altpop","#newmusic"], notes:"Pillar: Chapter re-release", suggestions:[]});
+  m.set("p_s2",{platform:"tt", date:d(0), time:"20:30", format:"Video", vaultId:"v_s2", status:"draft", caption:"", hashtags:[], notes:"Pillar: Fan-lens edits. Idea: POV text over the laughing take.", suggestions:[
+    {hook:"pov: you found the studio footage nobody talks about", caption:"this era was so underrated", hashtags:["#layers","#studiosession","#underratedartist"], why:"Fan-account framing gets shared more than first-person promo; your TikTok videos average 2× the reach of photo posts."},
+    {hook:"the take we almost deleted", caption:"keeping this one forever", hashtags:["#layers","#bts","#newartist"], why:"Outtake framing invites comments, your second-strongest engagement signal on TikTok."}]});
+  m.set("p_s3",{platform:"ig", date:d(2), time:"18:30", format:"Carousel", vaultId:"v_s3", status:"draft", caption:"Two sets, one story. Look closer at slide 7.", hashtags:["#layers","#conceptart"], notes:"Pillar: Lore drops", suggestions:[]});
+  m.set("p_s5",{platform:"x", date:d(1), time:"12:30", format:"Thread", vaultId:"v_s1", status:"draft", caption:"LAYERS came out before anyone was listening.\n---\nSo we're telling it again, one layer at a time. Chapter I starts tonight.", hashtags:["#LAYERS"], notes:"Pillar: Chapter re-release", suggestions:[]});
+  m.set("p_s4",{platform:"yt", date:d(3), time:"17:00", format:"Short", vaultId:"v_s4", status:"draft", caption:"", hashtags:[], notes:"Pillar: Live moments", suggestions:[]});
+  return m;
+}
+
+/* ================= metrics ================= */
+function connected(){ const p = profile(); if(!p) return []; return (p.platforms||[]).filter(k => (p.connections||{})[k] && (p.connections||{})[k] !== "off"); }
+function dataFor(k){
+  const p = profile(); const mode = p?.connections?.[k];
+  if(mode === "demo") return genPlatform(k, (p.handles?.[k] || p.name || "x") + (S.sampleMode ? "sample" : ""));
+  const ci = checkins(k).map(g => ({date:g.date, v:Number(g.followers)}));
+  return {source: ci.length ? "manual" : "none", posts:[], daily:ci, perWeek:[], audience:null};
+}
+function valueOn(daily, date){ let v = null; for(const r of daily){ if(r.date <= date) v = r.v; else break; } return v; }
+function stats(k, days=30){
+  const d = dataFor(k); const end = today(); const from = ymd(addDays(new Date(), -days)); const from2 = ymd(addDays(new Date(), -days*2));
+  const cur = d.daily.length ? d.daily[d.daily.length-1].v : 0;
+  const then = valueOn(d.daily, from); const then2 = valueOn(d.daily, from2);
+  const recent = d.posts.filter(x => x.date > from); const prior = d.posts.filter(x => x.date > from2 && x.date <= from);
+  const er = list => { const r = sum(list.map(x=>x.reach)); return r ? sum(list.map(x=>x.likes+x.comments+x.shares+x.saves))/r : 0; };
+  return { k, source:d.source, followers:cur, gain: then!=null ? cur-then : null, gainPrev: then!=null && then2!=null ? then-then2 : null,
+    posts:recent.length, reach:sum(recent.map(x=>x.reach)), reachPrev:sum(prior.map(x=>x.reach)), er:er(recent), erPrev:er(prior),
+    perPost: recent.length && then!=null ? (cur-then)/recent.length : null, data:d };
+}
+function combinedDaily(){
+  const ks = connected(); if(!ks.length) return [];
+  const all = ks.map(k => dataFor(k).daily).filter(x => x.length);
+  if(!all.length) return [];
+  const dates = [...new Set(all.flatMap(s => s.map(r=>r.date)))].sort();
+  return dates.map(date => ({date, v: sum(all.map(s => valueOn(s, date) ?? 0))}));
+}
+function goalStats(){
+  const p = profile(); if(!p) return null; const goal = Number(p.goal)||10000;
+  const series = p.goalPlatform === "all" ? combinedDaily() : dataFor(p.goalPlatform).daily;
+  const cur = series.length ? series[series.length-1].v : 0;
+  const daysLeft = Math.max(0, Math.ceil((parseYmd(p.goalDate) - parseYmd(today()))/86400000));
+  const need = Math.max(0, goal-cur); const perDay = daysLeft ? need/daysLeft : need;
+  let pace = null;
+  if(series.length >= 2){ const last = series[series.length-1]; const base = series.find(r => r.date >= ymd(addDays(parseYmd(last.date),-28))) || series[0];
+    const dd = (parseYmd(last.date)-parseYmd(base.date))/86400000; if(dd>0) pace = (last.v-base.v)/dd; }
+  return {goal, cur, daysLeft, need, perDay, pace, projected: pace!=null ? Math.round(cur + pace*daysLeft) : null, series, label: p.goalPlatform==="all" ? "All platforms" : pname(p.goalPlatform)};
+}
+function cadence(k){
+  const d = dataFor(k); if(!d.posts.length) return null;
+  const weeks = []; const end = new Date();
+  for(let w=0; w<16; w++){
+    const to = ymd(addDays(end, -w*7)); const from = ymd(addDays(end, -(w+1)*7));
+    const ps = d.posts.filter(x => x.date > from && x.date <= to);
+    const a = valueOn(d.daily, from), b = valueOn(d.daily, to); if(a==null||b==null) continue;
+    weeks.push({n:ps.length, gain:b-a, reach:avg(ps.map(x=>x.reach))});
+  }
+  const buckets = {};
+  weeks.forEach(w => { const n = Math.min(w.n, 7); if(!n) return; (buckets[n] ||= []).push(w); });
+  const rows = Object.entries(buckets).map(([n, ws]) => ({n:Number(n), weeks:ws.length, gain:avg(ws.map(w=>w.gain)), reach:avg(ws.map(w=>w.reach))})).sort((a,b)=>a.n-b.n);
+  const good = rows.filter(r => r.weeks >= 1);
+  if(!good.length) return null;
+  const best = Math.max(...good.map(r=>r.gain));
+  const rec = good.find(r => r.gain >= best*.85) || good[good.length-1];
+  const top = good.reduce((a,b)=> b.n > a.n ? b : a);
+  return {rows:good, rec:rec.n, best, recRow:rec, topRow:top};
+}
+function formatStats(k){
+  const d = dataFor(k); const by = {};
+  d.posts.forEach(x => (by[x.format] ||= []).push(x));
+  return Object.entries(by).map(([f, ps]) => { const r = sum(ps.map(x=>x.reach));
+    return {format:f, n:ps.length, reach:avg(ps.map(x=>x.reach)), er: r ? sum(ps.map(x=>x.likes+x.comments+x.shares+x.saves))/r : 0, saves: r ? sum(ps.map(x=>x.saves))/r : 0, shares: r ? sum(ps.map(x=>x.shares))/r : 0, follows:avg(ps.map(x=>x.follows))}; })
+    .sort((a,b)=>b.reach-a.reach);
+}
+function heat(ks){
+  const cells = BLOCKS.map(() => DOW.map(() => []));
+  ks.forEach(k => { const d = dataFor(k); const base = avg(d.posts.map(x=>x.reach)) || 1;
+    d.posts.forEach(x => { const h = x.hour < 6 ? x.hour+24 : x.hour; const bi = BLOCKS.findIndex(b => h>=b.a && h<b.b); if(bi>=0) cells[bi][x.dow].push(x.reach/base); }); });
+  return cells.map(r => r.map(c => c.length ? {v:avg(c), n:c.length} : null));
+}
+function bestSlot(ks){
+  const h = heat(ks); let best = null;
+  h.forEach((r,bi) => r.forEach((c,di) => { if(c && c.n >= 2 && (!best || c.v > best.v)) best = {v:c.v, day:DOW[di], block:BLOCKS[bi].n, n:c.n}; }));
+  return best;
+}
+function insights(){
+  const out = []; const ks = connected().filter(k => dataFor(k).posts.length);
+  ks.forEach(k => {
+    const f = formatStats(k);
+    if(f.length >= 2){ const a = f[0], b = f[f.length-1]; if(b.reach > 0 && a.reach/b.reach > 1.3) out.push({k, t:`On ${pname(k)}, ${a.format}s reach ${(a.reach/b.reach).toFixed(1)}× more people than ${b.format}s.`, s:`${a.n} ${a.format}s vs ${b.n} ${b.format}s, last ${DAYS} days`});
+      const sv = f.slice().sort((x,y)=>y.saves-x.saves)[0]; if(sv && sv.format !== a.format && sv.saves > 0) out.push({k, t:`${sv.format}s get saved the most on ${pname(k)} (${pct(sv.saves,1)} of reach). Saves tell the algorithm people want to come back.`, s:`save rate by format`}); }
+    const c = cadence(k);
+    if(c && c.topRow.n > c.rec){ const drop = 1 - c.topRow.reach / (c.recRow.reach || 1);
+      if(drop > .1) out.push({k, t:`Posting ${c.topRow.n}×/week on ${pname(k)} cut reach per post by ${pct(drop,0)} vs ${c.rec}×/week, without adding followers.`, s:`${c.rows.reduce((a,r)=>a+r.weeks,0)} weeks compared`}); }
+  });
+  const b = bestSlot(ks); if(b) out.unshift({k:null, t:`Your strongest window is ${b.day} ${b.block.toLowerCase()}: posts there reach ${(b.v).toFixed(1)}× your average.`, s:`${b.n} posts in that window`});
+  const viral = ks.flatMap(k => dataFor(k).posts.filter(x=>x.viral).map(x=>({...x}))).sort((a,b)=>b.reach-a.reach)[0];
+  if(viral) out.push({k:viral.platform, t:`Your biggest spike was a ${pname(viral.platform)} ${viral.format} on ${fmtDay(viral.date)}: ${fmtK(viral.reach)} reach and +${fmtN(viral.follows)} followers. Bring that footage back with a new angle.`, s:`top post, last ${DAYS} days`});
+  return out.slice(0,6);
+}
+function audienceAll(){
+  const ks = connected().filter(k => dataFor(k).audience); if(!ks.length) return null;
+  const w = ks.map(k => stats(k).followers); const tw = sum(w) || 1;
+  const ages = dataFor(ks[0]).audience.ages.map((a,i) => ({name:a.name, share: sum(ks.map((k,j) => dataFor(k).audience.ages[i].share*w[j]))/tw}));
+  const women = sum(ks.map((k,j) => dataFor(k).audience.gender.women*w[j]))/tw;
+  const cityMap = {}; ks.forEach((k,j) => dataFor(k).audience.cities.forEach(c => cityMap[c.name] = (cityMap[c.name]||0) + c.share*w[j]/tw));
+  const cities = Object.entries(cityMap).map(([name,share])=>({name,share})).sort((a,b)=>b.share-a.share).slice(0,5);
+  return {ages, gender:{women, men:1-women-.03, other:.03}, cities};
+}
+function anyDemo(){ const p = profile(); return !!p && Object.values(p.connections||{}).includes("demo"); }
+function metricsBrief(){
+  const p = profile(); const lines = [];
+  connected().forEach(k => { const s = stats(k); const f = formatStats(k); const c = cadence(k);
+    lines.push(`${pname(k)}: ${fmtN(s.followers)} followers, ${s.gain!=null?sgn(s.gain):"?"} in 30d, ${s.posts} posts in 30d, engagement ${pct(s.er)}${f.length?`, formats by avg reach: ${f.map(x=>`${x.format} ${fmtN(x.reach)} reach / ${pct(x.er)} ER / ${pct(x.saves,1)} saves`).join("; ")}`:""}${c?`, weekly follower gain by posts per week: ${c.rows.map(r=>`${r.n}/wk→${sgn(Math.round(r.gain))}`).join(", ")}, best ratio at ${c.rec}/wk`:""}`); });
+  const b = bestSlot(connected()); if(b) lines.push(`Best window across platforms: ${b.day} ${b.block}.`);
+  const a = audienceAll(); if(a) lines.push(`Audience: ages ${a.ages.map(x=>`${x.name} ${pct(x.share,0)}`).join(", ")}; women ${pct(a.gender.women,0)}; top cities ${a.cities.map(c=>c.name).join(", ")}.`);
+  const g = goalStats(); if(g) lines.push(`Goal: ${fmtN(g.goal)} on ${g.label} by ${p.goalDate}; now ${fmtN(g.cur)}; need ${g.perDay.toFixed(1)}/day; current pace ${g.pace!=null?g.pace.toFixed(1):"unknown"}/day.`);
+  return lines.join("\n");
+}
+
+/* ================= UI state ================= */
+const UI = { tab:"dash", wiz:0, draft:null, aPlat:"all", qFilter:"open", open:null, busy:{}, confirm:null, vaultEdit:null, csv:null, kitView:null, kitCode:null, img:null, showTable:false };
+try{ const t = localStorage.getItem(LS+"-tab"); if(t && TABS.some(x=>x.k===t)) UI.tab = t; }catch{}
+let toastT;
+function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(()=> t.hidden = true, 3400); }
+function go(tab){ UI.tab = tab; try{ localStorage.setItem(LS+"-tab", tab); }catch{} render(); window.scrollTo({top:0}); }
+const aiOff = () => `<span class="muted small">${S.sampleMode ? "Create your own workspace to get suggestions from Claude." : MODE==="claude" ? "Suggestions use Claude. Open this page on claude.ai and allow Claude when asked." : MODE==="supabase" ? "Sign in to get suggestions from Claude." : "Suggestions turn on once this site is connected to its server (see the README)."}</span>`;
+
+/* ================= render ================= */
+function render(preserve){
+  const kept = preserve ? [...document.querySelectorAll("#app input[id], #app textarea[id], #app select[id]")].map(el => [el.id, el.type==="checkbox" ? el.checked : el.value]) : [];
+  const active = document.activeElement?.id;
+  const p = profile();
+  $("#who").innerHTML = S.sampleMode ? `<span class="demo-tag">Sample creator</span><button class="btn sm" data-act="exitSample">${S.docs.get("profile")?.onboarded ? "Back to my workspace" : "Create my own"}</button>`
+    : (p?.onboarded ? `${anyDemo()?`<span class="demo-tag">Sample data</span>`:""}<span class="muted">${esc(p.name || S.me?.name || "")}</span>` : "") + (MODE==="supabase" && S.uid ? `<button class="btn ghost sm" data-act="signout">Sign out</button>` : "");
+  let html;
+  if(UI.kitView) html = vKitPublic();
+  else if(!S.ready && !S.sampleMode) html = `<div class="empty" style="margin-top:40px">Loading your workspace…</div>`;
+  else if(!p?.onboarded) html = UI.wiz ? vWizard() : UI.signin ? vSignIn() : vLanding();
+  else {
+    const waiting = posts().filter(x => x.status==="draft").length;
+    html = `<nav aria-label="Sections">${TABS.map(t => `<button data-go="${t.k}" aria-current="${UI.tab===t.k}">${t.name}${t.k==="queue"&&waiting?`<span class="count">${waiting}</span>`:""}</button>`).join("")}</nav>`
+      + ({dash:vDash, analytics:vAnalytics, plan:vPlan, queue:vQueue, vault:vVault, kit:vKit, settings:vSettings}[UI.tab] || vDash)();
+  }
+  $("#app").innerHTML = html;
+  for(const [k,v] of kept){ const el = document.getElementById(k); if(el){ if(el.type==="checkbox") el.checked = v; else el.value = v; } }
+  if(active){ const el = document.getElementById(active); if(el && el.tagName !== "BUTTON") el.focus(); }
+}
+
+/* ---------- landing / sign up ---------- */
+const PRIVACY_SHORT = "Your content and numbers stay yours. Nobody else can see your workspace, nothing is used to train AI, and you can delete everything at any time.";
+function vSignIn(){
+  if(UI.signinSent) return `<div class="signin panel stack"><h2>Check your email</h2><p>We sent a sign-in link to <b>${esc(UI.signinSent)}</b>. Open it on this device to continue.</p><button class="btn ghost" data-act="signinBack">Use a different email</button></div>`;
+  return `<div class="signin panel stack"><h2>Create your workspace</h2><p class="muted">Enter your email and we'll send you a sign-in link. No password needed.</p>
+    <label class="field">Email<input type="email" id="si_email" autocomplete="email" style="background:var(--ground);border:1px solid var(--line);border-radius:8px;padding:9px 11px"></label>
+    <div class="row"><button class="btn primary" data-act="signinSend" ${UI.busy.signin?"disabled":""}>${UI.busy.signin?"Sending…":"Email me a link"}</button><button class="btn ghost" data-act="signinBack">Back</button></div>
+    <p class="muted small">${PRIVACY_SHORT}</p></div>`;
+}
+function vLanding(){
+  return `<section class="land">
+    <div>
+      <span class="label">For artists, musicians and creatives</span>
+      <h1 style="margin-top:12px">Post less.<br>Mean more.</h1>
+      <p class="lede">Set a goal. Connect your accounts. Get a posting plan built from your own numbers, approve every post yourself, and share a media kit that shows partners where you stand.</p>
+      <div class="ctas"><button class="btn primary lg" data-act="startWiz">Create your workspace</button><button class="btn lg" data-act="sample">Look around with a sample creator</button></div>
+      <p class="muted small" style="margin-top:14px">${MODE==="claude" ? (S.me?.name ? `You'll sign up as ${esc(S.me.name)} using your Claude account. No new password needed.` : "You sign up with your Claude account. No new password needed.") : MODE==="supabase" ? "Sign up with your email. No password needed." : "Your workspace is saved in this browser."}</p>
+      <p class="muted small" style="margin-top:6px;max-width:44ch">${PRIVACY_SHORT}</p>
+    </div>
+    <div class="loop">
+      <div><b>Goal</b><span class="muted">10,000 followers by Dec 31. The app works out the daily pace you need.</span></div>
+      <div><b>Data</b><span class="muted">Instagram, TikTok and YouTube numbers in one place, separately and together.</span></div>
+      <div><b>Plan</b><span class="muted">How often to post on each platform, which formats work and when, based on your own results.</span></div>
+      <div><b>Approve</b><span class="muted">Drafts wait for you. Write your own captions; Claude only suggests.</span></div>
+      <div><b>Pitch</b><span class="muted">A live media kit for brands, venues and sponsors.</span></div>
+    </div>
+  </section>`;
+}
+function vWizard(){
+  const w = UI.draft; const step = UI.wiz;
+  const bar = `<div class="steps">${[1,2,3,4].map(i => `<i class="${i<=step?"on":""}"></i>`).join("")}</div><span class="label">Step ${step} of 4</span>`;
+  let body = "";
+  if(step === 1) body = `<h2>Who are you?</h2>
+    <label class="field">Artist or account name<input type="text" id="w_name" value="${esc(w.name)}"></label>
+    <div class="stack" style="gap:8px"><span class="label">What you make</span><div class="chips">${CREATOR_TYPES.map(t=>`<button class="chip" data-act="wpick" data-f="creatorType" data-v="${t}" aria-pressed="${w.creatorType===t}">${t}</button>`).join("")}</div></div>
+    <label class="field">Your world <span class="hint">The concept, story, symbols and look you're building. This keeps every post consistent.</span><textarea id="w_world" rows="4">${esc(w.world)}</textarea></label>
+    <div class="grid2"><label class="field">Who it's for<input type="text" id="w_aud" value="${esc(w.audience)}"></label><label class="field">Voice<input type="text" id="w_tone" value="${esc(w.tone)}" placeholder="e.g. cinematic, cryptic, warm"></label></div>`;
+  if(step === 2) body = `<h2>What's the goal?</h2>
+    <div class="grid3"><label class="field">Followers<input type="number" id="w_goal" min="1" value="${esc(w.goal)}"></label><label class="field">By<input type="date" id="w_gdate" value="${esc(w.goalDate)}"></label>
+      <label class="field">Counted on<select id="w_gplat">${PKEYS.map(k=>`<option value="${k}" ${w.goalPlatform===k?"selected":""}>${pname(k)}</option>`).join("")}<option value="all" ${w.goalPlatform==="all"?"selected":""}>All platforms combined</option></select></label></div>
+    <div class="stack" style="gap:8px"><span class="label">What the audience is for</span><div class="chips">${WHY.map(t=>`<button class="chip" data-act="wtoggle" data-f="why" data-v="${t}" aria-pressed="${w.why.includes(t)}">${t}</button>`).join("")}</div></div>
+    <label class="field">What's coming next <span class="hint">The release or campaign you're warming people up for</span><input type="text" id="w_camp" value="${esc(w.campaign)}"></label>`;
+  if(step === 3) body = `<h2>Connect your platforms</h2>
+    <p class="muted small">In this demo, connecting loads <b>sample data</b> so you can see the dashboard working. You can also log your real follower counts yourself. Real connections are on the roadmap. See Settings → How connecting works.</p>
+    <div>${PKEYS.map(k => { const on = w.platforms.includes(k); const mode = w.connections[k] || "demo"; return `<div class="conn">
+      <label class="plat"><input type="checkbox" data-act="wplat" data-k="${k}" ${on?"checked":""}> ${dot(k)} ${pname(k)}</label>
+      <input type="text" id="w_h_${k}" value="${esc(w.handles[k]||"")}" placeholder="@handle" ${on?"":"disabled"}>
+      <select id="w_c_${k}" ${on?"":"disabled"}><option value="demo" ${mode==="demo"?"selected":""}>Sample data</option><option value="manual" ${mode==="manual"?"selected":""}>I'll log numbers</option></select>
+    </div>`; }).join("")}</div>`;
+  if(step === 4) body = `<h2>How much time do you have?</h2>
+    <label class="field">Hours a week for content <span class="mono" style="font-size:1.4rem;font-family:var(--display)" id="w_hours_out">${w.hours}</span><input type="range" id="w_hours" min="1" max="25" value="${w.hours}"></label>
+    <p class="muted small">The plan stays inside this budget. Quality over quantity: fewer, stronger posts beat burning out.</p>
+    <div class="stack" style="gap:8px"><span class="label">What you enjoy making</span><div class="chips">${ENJOY.map(t=>`<button class="chip" data-act="wtoggle" data-f="enjoy" data-v="${t}" aria-pressed="${w.enjoy.includes(t)}">${t}</button>`).join("")}</div></div>`;
+  return `<div class="wizard panel stack">${bar}${body}
+    <div class="spread" style="margin-top:6px"><button class="btn ghost" data-act="wback">${step===1?"Cancel":"Back"}</button><button class="btn primary" data-act="wnext">${step===4?"Open my dashboard":"Continue"}</button></div></div>`;
+}
+function wizCollect(){
+  const w = UI.draft; const v = id => document.getElementById(id)?.value;
+  if(UI.wiz===1){ w.name = v("w_name")?.trim() ?? w.name; w.world = v("w_world") ?? w.world; w.audience = v("w_aud") ?? w.audience; w.tone = v("w_tone") ?? w.tone; }
+  if(UI.wiz===2){ w.goal = Number(v("w_goal"))||10000; w.goalDate = v("w_gdate") || w.goalDate; w.goalPlatform = v("w_gplat") || w.goalPlatform; w.campaign = v("w_camp") ?? w.campaign; }
+  if(UI.wiz===3){ PKEYS.forEach(k => { const h = v("w_h_"+k); if(h!=null) w.handles[k] = h.trim(); const c = v("w_c_"+k); if(c) w.connections[k] = c; }); }
+  if(UI.wiz===4){ w.hours = Number(v("w_hours"))||6; }
+}
+
+/* ---------- charts ---------- */
+const CHARTS = {};
+function lineChart(id, series, opts={}){
+  // series: [{key,label,color,points:[{date,v}]}]
+  const W = 720, H = opts.h || 260, L = 50, R = 70, T = 14, B = 28;
+  const all = series.flatMap(s => s.points); if(!all.length) return `<div class="empty">No data yet.</div>`;
+  const dates = [...new Set(all.map(p=>p.date))].sort();
+  const x0 = parseYmd(dates[0]).getTime(); const x1 = Math.max(parseYmd(dates[dates.length-1]).getTime(), opts.until ? parseYmd(opts.until).getTime() : 0);
+  const span = Math.max(86400000, x1-x0);
+  let lo = Math.min(...all.map(p=>p.v)), hi = Math.max(...all.map(p=>p.v), opts.goal||0, opts.projected||0);
+  const rng_ = hi-lo || hi || 1; lo = Math.max(0, lo - rng_*.12); hi = hi + rng_*.06;
+  const mag = Math.pow(10, Math.floor(Math.log10((hi-lo)/4 || 1))); const step = [1,2,2.5,5,10].map(m=>m*mag).find(s => (hi-lo)/s <= 5) || mag*10;
+  lo = Math.floor(lo/step)*step; hi = Math.ceil(hi/step)*step;
+  const X = t => L + (t-x0)/span*(W-L-R); const Y = v => T + (1-(v-lo)/(hi-lo||1))*(H-T-B);
+  let g = "";
+  for(let v=lo; v<=hi+1e-9; v+=step) g += `<line x1="${L}" x2="${W-R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L-8}" y="${Y(v)+4}" text-anchor="end" font-size="11" fill="var(--ink-2)" font-family="var(--mono)">${fmtK(v)}</text>`;
+  let m = new Date(new Date(x0).getFullYear(), new Date(x0).getMonth()+1, 1);
+  while(m.getTime() <= x1){ const xx = X(m.getTime()); g += `<text x="${xx}" y="${H-8}" text-anchor="middle" font-size="11" fill="var(--ink-2)">${m.toLocaleDateString(undefined,{month:"short"})}</text><line x1="${xx}" x2="${xx}" y1="${H-B}" y2="${H-B+4}" stroke="var(--line)"/>`; m = new Date(m.getFullYear(), m.getMonth()+1, 1); }
+  g += `<line x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}" stroke="var(--line)"/>`;
+  if(opts.goal){ const gy = Y(opts.goal); g += `<line x1="${L}" x2="${W-R}" y1="${gy}" y2="${gy}" stroke="var(--ink-2)" stroke-dasharray="4 4"/><text x="${W-R+6}" y="${gy+4}" font-size="11" fill="var(--ink-2)" font-weight="600">Goal ${fmtK(opts.goal)}</text>`; }
+  const labels = [];
+  series.forEach(s => {
+    if(!s.points.length) return;
+    const pts = s.points.map(p => [X(parseYmd(p.date).getTime()), Y(p.v)]);
+    const d = pts.map((q,i) => (i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1)).join(" ");
+    if(series.length === 1) g += `<path d="${d} L${pts[pts.length-1][0].toFixed(1)} ${H-B} L${pts[0][0].toFixed(1)} ${H-B} Z" fill="${s.color}" fill-opacity=".1"/>`;
+    g += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    if(s.points.length < 20) pts.forEach(q => g += `<circle cx="${q[0]}" cy="${q[1]}" r="4" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`);
+    const last = pts[pts.length-1]; g += `<circle cx="${last[0]}" cy="${last[1]}" r="4.5" fill="${s.color}" stroke="var(--surface)" stroke-width="2"/>`;
+    labels.push({y:last[1], x:last[0], text:`${s.label} ${fmtK(s.points[s.points.length-1].v)}`});
+  });
+  if(opts.projected!=null && opts.until && series.length===1){
+    const s = series[0].points; const lp = s[s.length-1]; g += `<line x1="${X(parseYmd(lp.date).getTime())}" y1="${Y(lp.v)}" x2="${X(parseYmd(opts.until).getTime())}" y2="${Y(opts.projected)}" stroke="var(--ink-2)" stroke-width="1.5" stroke-dasharray="2 4" stroke-linecap="round"/>`;
+    g += `<text x="${X(parseYmd(opts.until).getTime())}" y="${Y(opts.projected)+(opts.projected>opts.goal?-8:16)}" text-anchor="end" font-size="11" fill="var(--ink-2)">at this pace: ${fmtK(opts.projected)}</text>`;
+  }
+  labels.sort((a,b)=>a.y-b.y); for(let i=1;i<labels.length;i++) if(labels[i].y - labels[i-1].y < 14) labels[i].y = labels[i-1].y + 14;
+  if(!opts.until || series.length > 1) labels.forEach(l => g += `<text x="${Math.min(l.x+8, W-R+6)}" y="${l.y+4}" font-size="11" fill="var(--ink)" font-weight="600">${esc(l.text)}</text>`);
+  CHARTS[id] = {series, X, Y, x0, span, L, R, W, H, T, B, dates};
+  return `<div class="chart-wrap" data-chart="${id}"><svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(opts.aria||"Followers over time")}">${g}<line class="xh" x1="0" x2="0" y1="${T}" y2="${H-B}" stroke="var(--ink-2)" stroke-width="1" visibility="hidden"/><rect x="${L}" y="${T}" width="${W-L-R}" height="${H-T-B}" fill="transparent" class="hit"/></svg><div class="tip" hidden></div></div>`;
+}
+document.addEventListener("pointermove", e => {
+  const wrap = e.target.closest?.(".chart-wrap"); document.querySelectorAll(".chart-wrap").forEach(w => { if(w !== wrap){ const t = w.querySelector(".tip"); if(t) t.hidden = true; const xh = w.querySelector(".xh"); if(xh) xh.setAttribute("visibility","hidden"); } });
+  if(!wrap) return; const c = CHARTS[wrap.dataset.chart]; if(!c) return;
+  const svg = wrap.querySelector("svg"); const r = svg.getBoundingClientRect(); const sx = (e.clientX - r.left) * c.W / r.width;
+  if(sx < c.L || sx > c.W - c.R) return;
+  const t = c.x0 + (sx - c.L)/(c.W-c.L-c.R)*c.span;
+  let best = null; for(const d of c.dates){ const dt = Math.abs(parseYmd(d).getTime() - t); if(!best || dt < best.dt) best = {d, dt}; }
+  if(!best) return; const xx = c.X(parseYmd(best.d).getTime());
+  const xh = wrap.querySelector(".xh"); xh.setAttribute("x1", xx); xh.setAttribute("x2", xx); xh.setAttribute("visibility","visible");
+  const rows = c.series.map(s => { const v = valueOn(s.points, best.d); return v==null ? "" : `<div><span class="dot" style="background:${s.color}"></span> ${esc(s.label)} <span class="mono">${fmtN(v)}</span></div>`; }).join("");
+  const tip = wrap.querySelector(".tip"); tip.innerHTML = `<div style="opacity:.75">${fmtDay(best.d)}</div>${rows}`; tip.hidden = false;
+  const px = xx / c.W * r.width; tip.style.left = Math.max(70, Math.min(r.width-70, px)) + "px"; tip.style.top = (c.T / c.H * r.height + 4) + "px";
+});
+function hbars(rows, opts={}){
+  const max = Math.max(...rows.map(r=>r.v), 1e-9);
+  return `<div class="hbar">${rows.map(r => `<span>${r.label}</span><div class="t" title="${esc(r.title||"")}"><i class="${r.rec?"rec":""}" style="width:${Math.max(2, r.v/max*100).toFixed(1)}%"></i></div><span class="mono small">${r.text}</span>`).join("")}</div>`;
+}
+function heatmap(ks){
+  const h = heat(ks); const vals = h.flat().filter(Boolean).map(c=>c.v); if(!vals.length) return `<div class="empty">Needs post data.</div>`;
+  const mn = Math.min(...vals), mx = Math.max(...vals);
+  const color = v => { const i = Math.min(5, Math.floor((v-mn)/((mx-mn)||1)*5.999)); return `var(--seq-${i+1})`; };
+  return `<div class="heat"><span></span>${DOW.map(d=>`<span class="dh">${d}</span>`).join("")}
+    ${h.map((r,bi) => `<span class="h">${BLOCKS[bi].n}</span>${r.map((c,di) => c ? `<div class="c" style="background:${color(c.v)}" title="${DOW[di]} ${BLOCKS[bi].n}: ${c.v.toFixed(2)}× average reach (${c.n} posts)"></div>` : `<div class="c" style="background:var(--sunk);opacity:.5" title="No posts"></div>`).join("")}`).join("")}</div>
+    <div class="legend" style="margin-top:8px"><span>Lower reach</span>${[1,2,3,4,5,6].map(i=>`<span class="dot" style="background:var(--seq-${i});border-radius:2px;width:16px"></span>`).join("")}<span>Higher reach</span></div>`;
+}
+
+/* ---------- Dashboard ---------- */
+function deltaHtml(cur, prev, f = sgn, isPct){ if(prev==null || cur==null) return `<span class="d muted">—</span>`; const d = cur - prev; const cls = d >= 0 ? "up" : "down"; return `<span class="d ${cls}">${d>=0?"▲":"▼"} ${isPct ? (Math.abs(d)*100).toFixed(1)+" pts" : f(d).replace(/^[+−]/,"")} vs prior 30d</span>`; }
+function vDash(){
+  const p = profile(); const g = goalStats(); const ks = connected();
+  const ss = ks.map(k => stats(k));
+  const tot = sum(ss.map(s=>s.followers)); const gain = sum(ss.map(s=>s.gain||0)); const gainPrev = ss.every(s=>s.gainPrev!=null) ? sum(ss.map(s=>s.gainPrev)) : null;
+  const reach = sum(ss.map(s=>s.reach)), reachPrev = sum(ss.map(s=>s.reachPrev));
+  const eng = ss.filter(s=>s.reach); const er = eng.length ? sum(eng.map(s=>s.er*s.reach))/sum(eng.map(s=>s.reach)) : null;
+  const erPrev = eng.length && sum(eng.map(s=>s.reachPrev)) ? sum(eng.map(s=>s.erPrev*s.reachPrev))/sum(eng.map(s=>s.reachPrev)) : null;
+  const nPosts = sum(ss.map(s=>s.posts));
+  const per = g.goal/10; const tiles = Array.from({length:10},(_,i)=>{ const f = Math.max(0,Math.min(1,(g.cur-i*per)/per)); return `<div title="${fmtN((i+1)*per)}"><i style="width:${(f*100).toFixed(1)}%"></i></div>`; }).join("");
+  const onTrack = g.projected!=null && g.projected >= g.goal;
+  const ins = insights(); const queued = posts().filter(x => x.status!=="published" && x.date >= today()).slice(0,4);
+  return `<div class="stack-lg">
+    ${anyDemo() ? `<div class="banner warn"><span><b>Sample data.</b> These numbers are generated so you can try the dashboard. Switch a platform to “I'll log numbers” in Settings to track your real counts.</span></div>` : ""}
+    <div class="panel stack">
+      <div class="spread"><div><span class="label">${esc(g.label)} goal</span><h2 style="margin-top:4px"><span class="mono">${fmtN(g.cur)}</span> <span class="muted" style="font-weight:500">/ ${fmtN(g.goal)} by ${fmtDay(p.goalDate)}</span></h2></div>
+        <span class="pill ${onTrack?"published":"late"}">${g.pace==null?"Needs data":onTrack?"On track":"Behind pace"}</span></div>
+      <div class="goalbar" aria-label="${fmtN(g.cur)} of ${fmtN(g.goal)}">${tiles}</div>
+      <div class="grid3 small">
+        <div><span class="label">Needed</span><div class="mono">+${g.perDay.toFixed(1)} / day for ${g.daysLeft} days</div></div>
+        <div><span class="label">Your pace</span><div class="mono">${g.pace==null?"—":`${g.pace>=0?"+":""}${g.pace.toFixed(1)} / day (4 wks)`}</div></div>
+        <div><span class="label">At this pace</span><div class="mono">${g.projected==null?"—":`${fmtN(g.projected)} by ${fmtDay(p.goalDate)}`}</div></div>
+      </div>
+      ${lineChart("goal", [{key:"g", label:g.label, color:"var(--accent)", points:g.series.slice(-90)}], {goal:g.goal, until:p.goalDate, projected:g.projected, h:230, aria:"Followers toward the goal"})}
+    </div>
+    <div class="grid4">
+      <div class="kpi"><span class="label">Total followers</span><b>${fmtN(tot)}</b>${deltaHtml(gain, gainPrev)}</div>
+      <div class="kpi"><span class="label">Reach, 30 days</span><b>${fmtK(reach)}</b>${reachPrev?deltaHtml(reach, reachPrev, n=>fmtK(Math.abs(n))):`<span class="d muted">—</span>`}</div>
+      <div class="kpi"><span class="label">Engagement rate</span><b>${er==null?"—":pct(er)}</b>${er!=null&&erPrev!=null?deltaHtml(er, erPrev, null, true):`<span class="d muted">likes + comments + shares + saves ÷ reach</span>`}</div>
+      <div class="kpi"><span class="label">Posts, 30 days</span><b>${nPosts}</b><span class="d muted">${nPosts && gain ? `${(gain/nPosts).toFixed(1)} new followers per post` : "—"}</span></div>
+    </div>
+    <div class="stack"><div class="spread"><h2>By platform</h2><button class="btn ghost sm" data-go="analytics">Full analytics →</button></div>
+      <div class="grid3">${ss.map(s => { const c = cadence(s.k); const f = formatStats(s.k)[0]; return `<div class="pcard">
+        <div class="spread"><span class="plat">${dot(s.k)} ${pname(s.k)}</span><span class="label">${s.source==="demo"?"Sample":s.source==="manual"?"Logged":"No data"}</span></div>
+        <span class="big">${fmtN(s.followers)}</span>
+        <div class="kv"><span>30-day change</span><span class="${(s.gain||0)>=0?"up":"down"}">${s.gain==null?"—":sgn(s.gain)}</span>
+          <span>Engagement</span><span>${s.reach?pct(s.er):"—"}</span><span>Posts, 30d</span><span>${s.source==="demo"?s.posts:"—"}</span>
+          <span>Best format</span><span>${f?esc(f.format):"—"}</span><span>Best cadence</span><span>${c?`${c.rec}× / week`:"—"}</span></div></div>`; }).join("") || `<div class="empty">Connect a platform in Settings.</div>`}</div></div>
+    ${ins.length ? `<div class="stack"><h2>What your data says</h2><div class="grid3">${ins.map(i => `<div class="insight">${i.k?`<span class="plat small">${dot(i.k)} ${pname(i.k)}</span>`:`<span class="label">All platforms</span>`}<b>${esc(i.t)}</b><span class="src">${esc(i.s)}</span></div>`).join("")}</div></div>` : ""}
+    <div class="stack"><div class="spread"><h2>Up next</h2><button class="btn ghost sm" data-go="queue">Open queue →</button></div>
+      ${queued.length ? queued.map(postRow).join("") : `<div class="empty">Nothing queued. <button class="btn sm" data-go="plan">Build a plan</button></div>`}</div>
+  </div>`;
+}
+
+/* ---------- Analytics ---------- */
+function vAnalytics(){
+  const ks = connected(); const sel = UI.aPlat === "all" || !ks.includes(UI.aPlat) ? "all" : UI.aPlat; const use = sel === "all" ? ks : [sel];
+  const chips = `<div class="chips"><button class="chip" data-act="aplat" data-k="all" aria-pressed="${sel==="all"}">All together</button>${ks.map(k=>`<button class="chip" data-act="aplat" data-k="${k}" aria-pressed="${sel===k}">${dot(k)} ${pname(k)}</button>`).join("")}</div>`;
+  const series = sel === "all" ? ks.map(k => ({key:k, label:pname(k), color:pcolor(k), points:dataFor(k).daily})) : [{key:sel, label:pname(sel), color:pcolor(sel), points:dataFor(sel).daily}];
+  const allPosts = use.flatMap(k => dataFor(k).posts);
+  const top = allPosts.slice().sort((a,b)=>b.reach-a.reach).slice(0,8);
+  const aud = sel === "all" ? audienceAll() : dataFor(sel).audience;
+  const cad = use.map(k => ({k, c:cadence(k)})).filter(x => x.c);
+  const fmts = use.flatMap(k => formatStats(k).map(f => ({...f, k})));
+  return `<div class="stack-lg">
+    <div class="spread"><h2>Analytics</h2>${chips}</div>
+    ${anyDemo() ? `<div class="banner warn small"><span><b>Sample data.</b> Real numbers arrive once platform connections are built (see Settings).</span></div>` : ""}
+    <div class="panel stack"><div class="spread"><h3>Followers${sel==="all"?" by platform":""}</h3>${sel==="all"&&ks.length>1?`<div class="legend">${ks.map(k=>`<span>${dot(k)} ${pname(k)}</span>`).join("")}</div>`:""}</div>
+      ${lineChart("followers", series, {aria:"Followers by platform"})}
+      ${sel==="all"&&ks.length>1 ? `<div><span class="label">Combined</span>${lineChart("combined", [{key:"all", label:"All", color:"var(--accent)", points:combinedDaily()}], {h:180, aria:"Combined followers"})}</div>` : ""}
+    </div>
+    ${allPosts.length ? `<div class="grid2">
+      <div class="panel stack"><h3>When posts do best</h3><p class="muted small">Reach compared with your average post${sel==="all"?", all platforms":""}.</p>${heatmap(use)}</div>
+      <div class="panel stack"><h3>Sustainable cadence</h3><p class="muted small">Average followers gained per week, by how many times you posted that week. The highlighted bar is the fewest posts that still gets at least 85% of your best week.</p>
+        ${cad.map(({k,c}) => `<div class="stack" style="gap:6px"><span class="plat small">${dot(k)} ${pname(k)} — aim for <b>${c.rec}× / week</b></span>${hbars(c.rows.map(r => ({label:`${r.n}× / week`, v:Math.max(0,r.gain), text:sgn(Math.round(r.gain)), rec:r.n===c.rec, title:`${r.weeks} week${r.weeks===1?"":"s"} · ${fmtN(r.reach)} avg reach per post`})))}</div>`).join("")}</div>
+    </div>
+    <div class="panel stack"><h3>Formats</h3><div class="table-wrap"><table><thead><tr><th>Platform</th><th>Format</th><th class="num">Posts</th><th class="num">Avg reach</th><th class="num">Engagement</th><th class="num">Save rate</th><th class="num">Share rate</th><th class="num">Follows / post</th></tr></thead><tbody>
+      ${fmts.map(f=>`<tr><td><span class="plat">${dot(f.k)} ${pname(f.k)}</span></td><td>${esc(f.format)}</td><td class="num">${f.n}</td><td class="num">${fmtN(f.reach)}</td><td class="num">${pct(f.er)}</td><td class="num">${pct(f.saves,2)}</td><td class="num">${pct(f.shares,2)}</td><td class="num">${f.follows.toFixed(1)}</td></tr>`).join("")}</tbody></table></div></div>
+    <div class="panel stack"><h3>Top posts</h3><div class="table-wrap"><table><thead><tr><th>Date</th><th>Platform</th><th>Format</th><th class="num">Reach</th><th class="num">Likes</th><th class="num">Comments</th><th class="num">Shares</th><th class="num">Saves</th><th class="num">New followers</th></tr></thead><tbody>
+      ${top.map(x=>`<tr><td class="mono">${fmtDay(x.date)}</td><td><span class="plat">${dot(x.platform)} ${pname(x.platform)}</span></td><td>${esc(x.format)}</td><td class="num">${fmtN(x.reach)}</td><td class="num">${fmtN(x.likes)}</td><td class="num">${fmtN(x.comments)}</td><td class="num">${fmtN(x.shares)}</td><td class="num">${fmtN(x.saves)}</td><td class="num">${fmtN(x.follows)}</td></tr>`).join("")}</tbody></table></div></div>` : `<div class="empty">Post-level analytics (reach, formats, best times, cadence) need a connected platform. Logged follower counts appear above.</div>`}
+    ${aud ? `<div class="grid3">
+      <div class="panel stack"><h3>Age</h3>${hbars(aud.ages.map(a=>({label:a.name, v:a.share, text:pct(a.share,0)})))}</div>
+      <div class="panel stack"><h3>Gender</h3>${hbars([{label:"Women",v:aud.gender.women,text:pct(aud.gender.women,0)},{label:"Men",v:aud.gender.men,text:pct(aud.gender.men,0)},{label:"Other / unknown",v:aud.gender.other,text:pct(aud.gender.other,0)}])}</div>
+      <div class="panel stack"><h3>Top cities</h3>${hbars(aud.cities.map(c=>({label:esc(c.name), v:c.share, text:pct(c.share,0)})))}</div>
+    </div>` : ""}
+    <div class="panel stack"><h3>Log real follower counts</h3><p class="muted small">For platforms set to “I'll log numbers”. Once a week is enough.</p>
+      <div class="grid4"><label class="field">Date<input type="date" id="g_date" value="${today()}"></label>
+        ${(profile().platforms||[]).filter(k => profile().connections?.[k]==="manual").map(k=>`<label class="field">${pname(k)}<input type="number" min="0" id="g_${k}"></label>`).join("") || `<p class="muted small" style="align-self:end">No platforms are set to logging. Change that in Settings.</p>`}</div>
+      <div><button class="btn primary" data-act="logGrowth">Save counts</button></div></div>
+  </div>`;
+}
+
+/* ---------- Plan ---------- */
+function vPlan(){
+  const s = D().get("strategy"); const p = profile();
+  const btn = `<button class="btn ${s?"":"primary"}" data-act="strategy" ${UI.busy.strat||!S.sample?"disabled":""}>${UI.busy.strat?"Building…":s?"Rebuild from latest data":"Build my plan"}</button>`;
+  const head = `<div class="spread"><div><h2>Plan</h2><p class="muted small">Built from your goal, your ${p.hours}-hour weekly budget, and what your numbers show works.</p></div>${btn}</div>`;
+  if(!s) return `<div class="stack">${head}${UI.busy.strat?`<span class="working">Reading your numbers, then writing cadence, pillars and a runway to your launch…</span>`:""}
+    <div class="empty">Claude reads your dashboard (followers, formats, best times, cadence, audience) and writes a posting plan for each platform that fits your time, plus content pillars, world-building and a runway to ${esc(p.campaign||"your next launch")}.${S.sample?"":"<br><br>"+aiOff()}</div></div>`;
+  const list = a => `<ul>${(a||[]).map(i=>`<li>${esc(i)}</li>`).join("")}</ul>`;
+  return `<div class="stack">${head}${UI.busy.strat?`<span class="working">Rebuilding…</span>`:""}
+  <div class="panel strat">
+    <section><span class="label">The idea</span><p style="font-size:1.08rem">${esc(s.summary)}</p>${s.northStar?`<p class="small"><span class="label">North-star metric</span> ${esc(s.northStar)}</p>`:""}</section>
+    <section><div class="spread"><h3>Cadence by platform</h3><button class="btn primary sm" data-act="fillTwoWeeks">Add the next 2 weeks to my queue</button></div>
+      <div class="table-wrap"><table><thead><tr><th>Platform</th><th class="num">Per week</th><th>Formats</th><th>When</th><th>Why (from your data)</th></tr></thead><tbody>
+      ${(s.cadence||[]).map(c=>`<tr><td><span class="plat">${dot(c.platform)} ${pname(c.platform)}</span></td><td class="num">${esc(c.perWeek)}</td><td style="white-space:normal">${esc((c.formats||[]).join(", "))}</td><td style="white-space:normal">${esc(c.when)}</td><td style="white-space:normal;min-width:220px">${esc(c.why)}</td></tr>`).join("")}</tbody></table></div>
+      ${s.hoursCheck?`<p class="muted small">${esc(s.hoursCheck)}</p>`:""}</section>
+    <section><h3>Content pillars</h3><div class="grid2">${(s.pillars||[]).map(x=>`<div style="background:var(--ground);border-radius:8px;padding:12px"><b>${esc(x.name)}</b><p class="muted small" style="margin-top:4px">${esc(x.what)}</p>${x.example?`<p class="small" style="margin-top:6px"><span class="label">Example</span> ${esc(x.example)}</p>`:""}</div>`).join("")}</div></section>
+    <section><h3>World-building rules</h3>${list(s.worldBuilding)}</section>
+    <section><h3>Experiments to run</h3><div class="table-wrap"><table><thead><tr><th>Test</th><th>Measure</th><th>For</th></tr></thead><tbody>${(s.experiments||[]).map(x=>`<tr><td style="white-space:normal">${esc(x.test)}</td><td style="white-space:normal">${esc(x.metric)}</td><td>${esc(x.duration)}</td></tr>`).join("")}</tbody></table></div></section>
+    <section><h3>Runway to launch</h3><div class="stack" style="gap:10px">${(s.runway||[]).map(r=>`<div class="rw"><div><b>${esc(r.window)}</b><p class="muted small">${esc(r.focus)}</p></div>${list(r.actions)}</div>`).join("")}</div></section>
+    <section><h3>Partnership angle</h3><p>${esc(s.partnerAngle)}</p></section>
+  </div></div>`;
+}
+
+/* ---------- Queue ---------- */
+function effStatus(x){
+  if(x.status === "scheduled" && profile()?.connections?.[x.platform] === "demo" && (x.date+" "+(x.time||"23:59")) < (today()+" "+new Date().toTimeString().slice(0,5))) return "published";
+  return x.status;
+}
+function postRow(x){
+  const st = effStatus(x); const late = st!=="published" && x.date < today();
+  const v = x.vaultId ? D().get(x.vaultId) : null;
+  return `<div class="post">
+    <div class="meta"><span class="plat">${dot(x.platform)} ${pname(x.platform)}</span><span class="pill ${late?"late":st}">${late?"Missed":st==="draft"?"Needs approval":st}</span>
+      <span class="muted mono">${x.date?fmtDay(x.date):"No date"}${x.time?" · "+esc(x.time):""}</span>${x.format?`<span class="muted">· ${esc(x.format)}</span>`:""}${v?`<span class="muted">· ${esc(v.title)}</span>`:""}</div>
+    <div class="cap ${x.caption?"":"none"}">${x.caption ? esc(x.caption) : (x.notes ? esc(x.notes) : "No caption yet")}</div>
+    ${x.hashtags?.length?`<div class="tags">${esc(x.hashtags.join(" "))}</div>`:""}
+    <div class="actions">
+      <button class="btn sm" data-act="open" data-id="${x.id}">Open</button>
+      ${st==="draft"?`<button class="btn primary sm" data-act="approve" data-id="${x.id}" ${x.caption?"":"disabled title=\"Write or pick a caption first\""}>Approve</button>`:""}
+      ${st==="approved"?`<button class="btn primary sm" data-act="schedule" data-id="${x.id}">${profile()?.connections?.[x.platform]==="demo"?"Schedule":"Mark posted"}</button>`:""}
+      ${st!=="draft"?`<button class="btn sm" data-act="copy" data-id="${x.id}">Copy caption</button>`:""}
+    </div></div>`;
+}
+function composer(x){
+  const vs = vault(); const busy = UI.busy["sg_"+x.id]; const p = profile();
+  const mode = p.connections?.[x.platform];
+  return `<div class="panel stack">
+    <div class="spread"><h3>${x.caption?"Edit post":"New post"}</h3><button class="btn ghost sm" data-act="close">Close</button></div>
+    <div class="composer">
+      <div class="stack">
+        <div class="grid3">
+          <label class="field">Platform<select id="c_plat">${(p.platforms||[]).map(k=>`<option value="${k}" ${k===x.platform?"selected":""}>${pname(k)}</option>`).join("")}</select></label>
+          <label class="field">Date<input type="date" id="c_date" value="${esc(x.date)}"></label>
+          <label class="field">Time<input type="time" id="c_time" value="${esc(x.time||"")}"></label>
+        </div>
+        <div class="grid2">
+          <label class="field">Format<select id="c_fmt">${(FORMATS[x.platform]||[]).map(f=>`<option ${x.format===f?"selected":""}>${f}</option>`).join("")}</select></label>
+          <label class="field">Footage<select id="c_vault"><option value="">—</option>${vs.map(v=>`<option value="${v.id}" ${x.vaultId===v.id?"selected":""}>${esc(v.title)}</option>`).join("")}</select></label>
+        </div>
+        <label class="field">Your caption <span class="hint">Yours to write. Suggestions are on the right if you want them.${x.format==="Thread"?" For a thread, put a line with just --- between posts.":""}</span><textarea id="c_cap" rows="6">${esc(x.caption)}</textarea></label>
+        <span class="small" id="c_count">${countHtml(x.platform, x.format, x.caption, x.hashtags)}</span>
+        <label class="field">Hashtags<input type="text" id="c_tags" value="${esc((x.hashtags||[]).join(" "))}" placeholder="#yourworld #genre"></label>
+        <label class="field">Notes / idea<input type="text" id="c_notes" value="${esc(x.notes||"")}"></label>
+        <p class="route">${dot(x.platform)} ${mode==="demo" ? `When scheduled: ${esc(PLATFORMS[x.platform].route)} <span class="demo-tag">simulated</span>` : `Not connected: you'll copy the caption and post it yourself.`}</p>
+        <div class="row"><button class="btn primary" data-act="saveDraft" data-id="${x.id}">Save</button>
+          ${x.status==="draft"?`<button class="btn" data-act="saveApprove" data-id="${x.id}">Save and approve</button>`:""}
+          ${UI.confirm===x.id?`<button class="btn danger" data-act="delete" data-id="${x.id}">Confirm delete</button><button class="btn ghost" data-act="cancelDel">Keep</button>`:`<button class="btn ghost" data-act="askDel" data-id="${x.id}">Delete</button>`}</div>
+      </div>
+      <div class="stack">
+        <div class="spread"><span class="label">Suggestions</span><button class="btn sm" data-act="suggest" data-id="${x.id}" ${busy||!S.sample?"disabled":""}>${busy?"Thinking…":x.suggestions?.length?"More ideas":"Suggest captions"}</button></div>
+        ${S.canImg?`<div class="row small"><button class="btn ghost sm" data-act="pickImg">${UI.img?"Change still":"Add a still frame"}</button>${UI.img?`<span class="muted">${esc(UI.img.name)}</span>`:""}</div>`:""}
+        ${!S.sample?aiOff():""}
+        ${busy?`<span class="working">Writing options in your voice…</span>`:""}
+        ${(x.suggestions||[]).map((s,i) => `<div class="sugg">${s.hook?`<span class="h">${esc(s.hook)}</span>`:""}<span class="c">${esc(s.caption)}</span><span class="tags mono small" style="color:var(--accent)">${esc((s.hashtags||[]).join(" "))}</span>${s.why?`<span class="muted small">${esc(s.why)}</span>`:""}
+          <div class="row"><button class="btn sm" data-act="useSugg" data-id="${x.id}" data-i="${i}">Use as starting point</button><button class="btn ghost sm" data-act="useTags" data-id="${x.id}" data-i="${i}">Use hashtags only</button></div></div>`).join("") || (busy||!S.sample?"":`<p class="muted small">Ask for a few options to react to. Nothing is used unless you choose it.</p>`)}
+      </div>
+    </div></div>`;
+}
+function vQueue(){
+  const all = posts(); const t = today();
+  const f = UI.qFilter;
+  const list = all.filter(x => { const st = effStatus(x); return f==="open" ? st!=="published" : f==="all" ? true : st===f; });
+  const groups = {}; list.forEach(x => (groups[x.date||"No date"] ||= []).push(x));
+  const dates = Object.keys(groups).sort(); if(f==="published") dates.reverse();
+  const cnt = k => all.filter(x => k==="open" ? effStatus(x)!=="published" : k==="all" ? true : effStatus(x)===k).length;
+  const chip = (k,n) => `<button class="chip" data-act="qf" data-f="${k}" aria-pressed="${f===k}">${n} <span class="mono">${cnt(k)}</span></button>`;
+  const openPost = UI.open ? (UI.open === "new" ? null : D().get(UI.open) ? {id:UI.open, ...D().get(UI.open)} : null) : null;
+  return `<div class="stack">
+    <div class="spread"><div><h2>Queue</h2><p class="muted small">Nothing goes out until you approve it.</p></div>
+      <div class="row"><button class="btn primary" data-act="newPost">New post</button><button class="btn" data-act="export" ${cnt("approved")?"":"disabled"}>Export approved (CSV)</button></div></div>
+    ${openPost ? composer(openPost) : ""}
+    <div class="chips">${chip("open","Upcoming")}${chip("draft","Needs approval")}${chip("approved","Approved")}${chip("scheduled","Scheduled")}${chip("published","Published")}</div>
+    ${UI.csv ? `<div class="panel stack"><div class="spread"><b>Approved posts as CSV</b><button class="btn ghost sm" data-act="closeCsv">Close</button></div><textarea id="csvOut" rows="6" readonly class="mono" style="font-size:.75rem">${esc(UI.csv)}</textarea><div><button class="btn sm" data-act="copyCsv">Copy CSV</button></div></div>` : ""}
+    ${dates.length ? dates.map(d => `<div class="daygroup"><h3>${d===t?"Today":d==="No date"?d:fmtDay(d)}</h3>${groups[d].map(postRow).join("")}</div>`).join("") : `<div class="empty">Nothing here. Build a plan, or start a post yourself.</div>`}
+  </div>`;
+}
+
+/* ---------- Vault ---------- */
+function vVault(){
+  const vs = vault(); const ps = posts();
+  const e = UI.vaultEdit && UI.vaultEdit !== "new" ? {id:UI.vaultEdit, ...D().get(UI.vaultEdit)} : {};
+  return `<div class="stack">
+    <div class="spread"><div><h2>Vault</h2><p class="muted small">What you've already made: videos, photos and footage you can bring back with a new angle.</p></div>${UI.vaultEdit?"":`<button class="btn primary" data-act="newVault">Add footage or photos</button>`}</div>
+    ${UI.vaultEdit ? `<div class="panel stack"><div class="grid2">
+        <label class="field">Title<input type="text" id="v_title" value="${esc(e.title)}"></label>
+        <label class="field">Type<select id="v_type">${["Video","Photo","Photo set","Audio","Text / lyrics"].map(t=>`<option ${e.type===t?"selected":""}>${t}</option>`).join("")}</select></label>
+        <label class="field">Chapter / era<input type="text" id="v_era" value="${esc(e.era)}"></label>
+        <label class="field">Where the file lives<input type="text" id="v_link" value="${esc(e.link)}" placeholder="Drive link or folder"></label></div>
+      <label class="field">Notes <span class="hint">Best moments, timestamps, what it means in your world</span><textarea id="v_notes" rows="3">${esc(e.notes)}</textarea></label>
+      <div class="row"><button class="btn primary" data-act="saveVault">Save</button><button class="btn ghost" data-act="cancelVault">Cancel</button></div></div>` : ""}
+    ${vs.length ? `<div class="grid3">${vs.map(v => `<div class="vitem"><div class="spread" style="align-items:flex-start"><b>${esc(v.title)}</b><span class="pill">${esc(v.type)}</span></div>
+      ${v.era?`<span class="label">${esc(v.era)}</span>`:""}${v.notes?`<p class="muted small">${esc(v.notes)}</p>`:""}
+      <div class="spread small" style="margin-top:auto"><span class="muted mono">Used ${ps.filter(x=>x.vaultId===v.id).length}×</span><div class="row" style="gap:4px"><button class="btn sm" data-act="vaultPost" data-id="${v.id}">Make a post</button><button class="btn ghost sm" data-act="editVault" data-id="${v.id}">Edit</button></div></div></div>`).join("")}</div>`
+      : (UI.vaultEdit ? "" : `<div class="empty">Add the videos and photos you've already released so the plan can bring them back.</div>`)}
+  </div>`;
+}
+
+/* ---------- Media kit ---------- */
+function kitData(){
+  const p = profile(); const ks = connected(); const ss = ks.map(k=>stats(k));
+  const tot = sum(ss.map(s=>s.followers)); const reach = sum(ss.map(s=>s.reach));
+  const eng = ss.filter(s=>s.reach); const er = eng.length ? sum(eng.map(s=>s.er*s.reach))/sum(eng.map(s=>s.reach)) : null;
+  const d90 = ss.map(s => { const d = s.data.daily; const then = valueOn(d, ymd(addDays(new Date(),-90))); return then!=null ? s.followers-then : 0; });
+  const g90 = sum(d90); const base = tot - g90;
+  const top = ks.flatMap(k => dataFor(k).posts).sort((a,b)=>b.reach-a.reach).slice(0,3).map(x => ({platform:x.platform, format:x.format, date:x.date, reach:x.reach, engagement:x.likes+x.comments+x.shares+x.saves}));
+  return {name:p.name, creatorType:p.creatorType, handles:p.handles, kit:p.kit||{}, platforms:ss.map(s=>({k:s.k, followers:s.followers, er:s.reach?s.er:null})), total:tot, reach30:reach, er, growth90:base>0?g90/base:null, audience:audienceAll(), top, sample:anyDemo(), updated:Date.now()};
+}
+function kitHtml(k){
+  const list = s => `<ul style="margin:0;padding-left:18px">${String(s||"").split("\n").filter(Boolean).map(l=>`<li>${esc(l)}</li>`).join("")}</ul>`;
+  return `<div class="kit">
+    ${k.sample?`<span class="stamp">Sample data — not real metrics</span>`:""}
+    <div><span class="label">${esc(k.creatorType||"Creator")} · Media kit</span><h1 style="margin-top:6px">${esc(k.name)}</h1>${k.kit.headline?`<p style="font-size:1.1rem;margin-top:8px">${esc(k.kit.headline)}</p>`:""}
+      <p class="muted small" style="margin-top:8px">${Object.entries(k.handles||{}).filter(([,h])=>h).map(([p,h])=>`${pname(p)} ${esc(h)}`).join(" · ")}</p></div>
+    <div class="stats"><div><span class="label">Followers</span><b>${fmtK(k.total)}</b></div><div><span class="label">Monthly reach</span><b>${fmtK(k.reach30)}</b></div><div><span class="label">Engagement</span><b>${k.er==null?"—":pct(k.er)}</b></div><div><span class="label">90-day growth</span><b>${k.growth90==null?"—":"+"+pct(k.growth90,0)}</b></div></div>
+    <div class="grid2">
+      <div class="stack" style="gap:8px"><h3>By platform</h3>${k.platforms.map(p=>`<div class="spread small"><span class="plat">${dot(p.k)} ${pname(p.k)}</span><span class="mono">${fmtN(p.followers)}${p.er!=null?` · ${pct(p.er)} ER`:""}</span></div>`).join("")}</div>
+      ${k.audience?`<div class="stack" style="gap:8px"><h3>Audience</h3><p class="small">${pct(k.audience.ages.slice().sort((a,b)=>b.share-a.share)[0].share,0)} aged ${k.audience.ages.slice().sort((a,b)=>b.share-a.share)[0].name} · ${pct(k.audience.gender.women,0)} women</p><p class="small muted">Top cities: ${k.audience.cities.map(c=>esc(c.name)).join(", ")}</p></div>`:""}
+    </div>
+    ${k.top?.length?`<div class="stack" style="gap:8px"><h3>Top content</h3>${k.top.map(t=>`<div class="spread small"><span class="plat">${dot(t.platform)} ${pname(t.platform)} ${esc(t.format)} · ${fmtDay(t.date)}</span><span class="mono">${fmtK(t.reach)} reach · ${fmtK(t.engagement)} engagements</span></div>`).join("")}</div>`:""}
+    <div class="grid2">${k.kit.offer?`<div class="stack" style="gap:6px"><h3>Work with me</h3>${list(k.kit.offer)}</div>`:""}${k.kit.past?`<div class="stack" style="gap:6px"><h3>Past work</h3>${list(k.kit.past)}</div>`:""}</div>
+    ${k.kit.contact?`<p><span class="label">Contact</span> <span style="user-select:all">${esc(k.kit.contact)}</span></p>`:""}
+    <p class="muted small">Updated ${new Date(k.updated).toLocaleDateString()} · Made with Rollout Room</p>
+  </div>`;
+}
+function vKit(){
+  const p = profile(); const kd = kitData(); const k = p.kit || {};
+  const code = p.kitCode; const link = code ? kitLink(code) : null;
+  return `<div class="stack-lg">
+    <div class="spread"><div><h2>Media kit</h2><p class="muted small">Your numbers fill in automatically. Add the pitch.</p></div>
+      <div class="row"><button class="btn" data-act="copyKit">Copy as text for an email</button><button class="btn primary" data-act="publishKit" ${S.sampleMode||!S.kits?"disabled":""}>${code?"Update shared link":"Create shareable link"}</button></div></div>
+    ${S.sampleMode?`<div class="banner small"><span>Sharing is turned off for the sample creator.</span></div>`:!S.kits?`<div class="banner small"><span>Shareable links turn on once this site is connected to its server. You can still copy the kit as text.</span></div>`:""}
+    ${link?`<div class="panel stack small"><span class="label">Share this link</span><div class="row"><code class="mono" style="word-break:break-all;user-select:all">${esc(link)}</code><button class="btn sm" data-act="copyLink">Copy</button></div><p class="muted">${MODE==="claude" ? "Partners need a Claude account and access to this page. Give viewers access from the page's Share menu." : "Anyone with the link can open it. No account needed."} ${kd.sample?"<b>The kit is stamped “Sample data” until all your platforms use real numbers.</b>":""}</p></div>`:""}
+    <div class="grid2" style="align-items:start">
+      <div class="panel stack"><h3>Your pitch</h3>
+        <label class="field">One-line intro<input type="text" id="k_head" value="${esc(k.headline)}" placeholder="What you make and why it matters"></label>
+        <label class="field">What you offer <span class="hint">One per line</span><textarea id="k_offer" rows="4">${esc(k.offer)}</textarea></label>
+        <label class="field">Past work and collaborations <span class="hint">One per line</span><textarea id="k_past" rows="3">${esc(k.past)}</textarea></label>
+        <label class="field">Contact <span class="hint">Shown as text on the kit</span><input type="text" id="k_contact" value="${esc(k.contact)}"></label>
+        <div><button class="btn primary" data-act="saveKit">Save pitch</button></div></div>
+      ${kitHtml(kd)}
+    </div></div>`;
+}
+function vKitPublic(){
+  const k = UI.kitView;
+  if(k === "loading") return `<div class="empty">Loading media kit…</div>`;
+  if(k === "missing") return `<div class="empty">This media kit isn't available. It may have been removed, or you may need access to this page. <button class="btn sm" data-act="leaveKit">Go to Rollout Room</button></div>`;
+  return `<div class="stack" style="max-width:820px;margin:0 auto">${kitHtml(k)}<div><button class="btn ghost sm" data-act="leaveKit">Make your own with Rollout Room →</button></div></div>`;
+}
+
+/* ---------- Settings ---------- */
+function vSettings(){
+  const p = profile();
+  return `<div class="stack-lg">
+    <div class="panel stack"><h3>Connections</h3>
+      <div>${PKEYS.map(k => { const on = (p.platforms||[]).includes(k); const mode = p.connections?.[k] || "off"; return `<div class="conn">
+        <label class="plat"><input type="checkbox" id="s_on_${k}" ${on?"checked":""}> ${dot(k)} ${pname(k)}</label>
+        <input type="text" id="s_h_${k}" value="${esc(p.handles?.[k]||"")}" placeholder="@handle">
+        <select id="s_c_${k}"><option value="demo" ${mode==="demo"?"selected":""}>Sample data</option><option value="manual" ${mode==="manual"?"selected":""}>I'll log numbers</option></select></div>`; }).join("")}</div>
+      <details class="small"><summary>How connecting works</summary>
+        <div class="stack" style="margin-top:10px">
+          <p>In the full product, “Connect” opens each platform's own sign-in (OAuth). Rollout Room never sees your password; the platform hands it a token that a server stores securely.</p>
+          ${PKEYS.map(k=>`<p><b>${pname(k)}</b> — ${esc(PLATFORMS[k].api)}. ${esc(PLATFORMS[k].route)}.</p>`).join("")}
+          <p class="muted">Each platform reviews apps before they can post or read insights for other people's accounts. This demo simulates that part with sample data.</p>
+        </div></details>
+    </div>
+    <div class="panel stack"><h3>Profile and goal</h3>
+      <div class="grid2"><label class="field">Name<input type="text" id="s_name" value="${esc(p.name)}"></label><label class="field">What you make<select id="s_type">${CREATOR_TYPES.map(t=>`<option ${p.creatorType===t?"selected":""}>${t}</option>`).join("")}</select></label></div>
+      <label class="field">Your world<textarea id="s_world" rows="3">${esc(p.world)}</textarea></label>
+      <div class="grid2"><label class="field">Who it's for<input type="text" id="s_aud" value="${esc(p.audience)}"></label><label class="field">Voice<input type="text" id="s_tone" value="${esc(p.tone)}"></label></div>
+      <label class="field">What's coming next<input type="text" id="s_camp" value="${esc(p.campaign)}"></label>
+      <div class="grid4"><label class="field">Goal<input type="number" id="s_goal" value="${esc(p.goal)}"></label><label class="field">By<input type="date" id="s_gdate" value="${esc(p.goalDate)}"></label>
+        <label class="field">Counted on<select id="s_gplat">${PKEYS.map(k=>`<option value="${k}" ${p.goalPlatform===k?"selected":""}>${pname(k)}</option>`).join("")}<option value="all" ${p.goalPlatform==="all"?"selected":""}>All combined</option></select></label>
+        <label class="field">Hours / week<input type="number" id="s_hours" min="1" max="40" value="${esc(p.hours)}"></label></div>
+      <div><button class="btn primary" data-act="saveSettings">Save settings</button></div>
+    </div>
+    <div class="panel stack small"><h3>Your data</h3>
+      <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px">
+        <li>Your content, captions and numbers belong to you. Rollout Room only stores them to show you your own workspace.</li>
+        <li>No one else can see your workspace. Your media kit is public only if you create a link for it.</li>
+        <li>When you ask for suggestions, the request goes to Claude's API just to write the answer. Anthropic doesn't train its models on API data by default.</li>
+        <li>Start over below deletes everything, including your media kit link.</li></ul></div>
+    ${S.sampleMode ? "" : `<div class="panel stack"><h3>Start over</h3><p class="muted small">Deletes your profile, plan, queue, vault, logged counts and media kit link.</p>
+      <div>${UI.confirm==="reset"?`<button class="btn danger" data-act="reset">Delete everything</button> <button class="btn ghost" data-act="cancelDel">Cancel</button>`:`<button class="btn danger" data-act="askReset">Start over</button>`}</div></div>`}
+  </div>`;
+}
+
+/* ================= AI ================= */
+function brief(){
+  const p = profile();
+  return `CREATOR: ${p.name} (${p.creatorType||"creator"})
+Platforms: ${(p.platforms||[]).map(k=>`${k}=${pname(k)}${p.handles?.[k]?` ${p.handles[k]}`:""}`).join(", ")}
+World / concept: ${p.world||"(not set)"}
+Audience they want: ${p.audience||"(not set)"}
+Voice: ${p.tone||"(not set)"}
+Building toward: ${p.campaign||"(not set)"}; audience is for: ${(p.why||[]).join(", ")}
+Time budget: ${p.hours} hours/week. Enjoys making: ${(p.enjoy||[]).join(", ")}
+DATA:
+${metricsBrief()}`;
+}
+async function ask(prompt, opts={}){ if(!S.sample) throw {code:"not_granted"}; return S.sample.json(prompt, {modelTier:"default", ...opts}); }
+function aiErr(e){ const c = e?.code;
+  if(c==="not_granted") return "Claude isn't allowed on this page yet. Allow it in the page's permissions and try again.";
+  if(c==="rate_limited") return "Too many requests at once. Wait a minute and try again.";
+  if(c==="invalid_json") return "The answer came back incomplete. Try again.";
+  if(c==="daily_limit") return "You've used today's Claude requests. They reset tomorrow.";
+  if(c==="signed_out") return "Your sign-in expired. Sign in again to use suggestions.";
+  if(c==="refused") return "Claude couldn't help with that one. Try rewording the notes.";
+  if(c==="image_too_big") return "That image is too large. Use a screenshot under 4 MB.";
+  return "Couldn't reach Claude. Try again in a moment."; }
+
+async function strategy(){
+  UI.busy.strat = true; render();
+  try{
+    const vs = vault();
+    const r = await ask(`You are a senior social media strategist who treats social as marketing, not as gambling on an algorithm. Every recommendation must cite the creator's own data below where possible, and fit their time budget. Quality over quantity.
+${brief()}
+VAULT: ${vs.map(v=>`${v.title} (${v.type}${v.era?", "+v.era:""})`).join("; ") || "(empty)"}
+Today: ${today()}.
+
+Return ONLY JSON:
+{"summary":"2-3 sentences: the rollout idea",
+"northStar":"the one metric to steer by and why",
+"cadence":[{"platform":"platform key like ig","perWeek":3,"formats":["Reel"],"when":"e.g. Thu & Sun 6–9pm","why":"cite their numbers"}],  (one per platform they use; total effort must fit ${profile().hours} h/week)
+"hoursCheck":"one sentence estimating weekly hours for this cadence",
+"weeklySlots":[{"platform":"ig","day":"Thu","time":"19:00","format":"Reel","pillar":"","idea":"specific post idea using their vault or world"}], (exactly the per-week counts above)
+"pillars":[{"name":"","what":"","example":""}], (3-4)
+"worldBuilding":["rules: recurring symbols, series names, visual/sound signatures"], (4-5)
+"experiments":[{"test":"","metric":"","duration":"2 weeks"}], (3)
+"runway":[{"window":"date range","focus":"","actions":["",""]}], (3-4 windows from today to the launch)
+"partnerAngle":"how to position these numbers and this world to brands, venues and sponsors"}`, {modelTier:"complex"});
+    put("strategy", {...r, at:Date.now()});
+  }catch(e){ toast(aiErr(e)); }
+  UI.busy.strat = false; render();
+}
+function fillTwoWeeks(){
+  const s = D().get("strategy"); if(!s?.weeklySlots?.length){ toast("Rebuild the plan first."); return; }
+  const p = profile(); let n = 0;
+  for(let i=1; i<=14; i++){
+    const d = addDays(new Date(), i); const dn = DOW[d.getDay()];
+    s.weeklySlots.filter(w => String(w.day).slice(0,3).toLowerCase() === dn.toLowerCase() && (p.platforms||[]).includes(w.platform)).forEach(w => {
+      const date = ymd(d); if(posts().some(x => x.date===date && x.platform===w.platform && x.time===w.time)) return;
+      put(rid("p"), {platform:w.platform, date, time:/^\d{2}:\d{2}$/.test(w.time||"")?w.time:"", format:(FORMATS[w.platform]||[]).includes(w.format)?w.format:(FORMATS[w.platform]||[""])[0], vaultId:"", status:"draft", caption:"", hashtags:[], notes:`${w.pillar?w.pillar+": ":""}${w.idea||""}`, suggestions:[]}); n++;
+    });
+  }
+  toast(n ? `${n} post slots added. Open each one to write or pick a caption.` : "Those slots are already in your queue.");
+  if(n) go("queue");
+}
+async function suggest(id){
+  collectComposer(id);
+  const x = D().get(id); if(!x) return; UI.busy["sg_"+id] = true; render();
+  try{
+    const v = x.vaultId ? D().get(x.vaultId) : null;
+    const r = await ask(`You suggest captions for a creator. They write their own; your options are starting points, so make them distinct from each other and true to the creator's voice. Never invent facts.
+${brief()}
+POST: ${pname(x.platform)} ${x.format||""} on ${x.date||"TBD"} ${x.time||""}
+Footage: ${v ? `${v.title} (${v.type}${v.era?", "+v.era:""}) ${v.notes||""}` : "(none picked)"}
+Idea / notes: ${x.notes||"(none)"}
+Their draft so far: ${x.caption||"(empty)"}
+${UI.img ? "A still frame is attached." : ""}
+Platform norms: Instagram captions can breathe and invite saves/shares; TikTok captions are short, the on-screen hook does the work; YouTube Shorts need a searchable title-like line; Threads is conversational (under 500 characters); X is conversational and each post must fit in 280 characters including hashtags (use 1-2 hashtags on X), and for the Thread format separate the posts with a line containing only ---. 3-5 hashtags, mixing their world's signature tag with niche and discovery tags; no spammy tags.
+Return ONLY JSON: {"options":[{"hook":"first words on screen or first line","caption":"","hashtags":["#..."],"why":"one sentence tied to their data"}]} with 3 options.`, UI.img ? {images:[UI.img]} : {});
+    const opts = (r?.options||[]).map(o => ({hook:String(o.hook||""), caption:String(o.caption||""), hashtags:(o.hashtags||[]).map(String).map(t=>t.startsWith("#")?t:"#"+t).slice(0,6), why:String(o.why||"")}));
+    const cur = D().get(id); if(cur) put(id, {...clone(cur), suggestions:[...opts, ...(cur.suggestions||[])].slice(0,6)});
+  }catch(e){ toast(aiErr(e)); }
+  delete UI.busy["sg_"+id]; render();
+}
+
+/* ================= actions ================= */
+function startWizard(){
+  UI.draft = {name:S.me?.name||"", creatorType:"Musician", world:"", audience:"", tone:"", goal:10000, goalDate:`${new Date().getFullYear()}-12-31`, goalPlatform:"ig", why:[], campaign:"", platforms:["ig","tt","x"], handles:{}, connections:{ig:"demo",tt:"demo",x:"demo"}, hours:6, enjoy:[]};
+  UI.wiz = 1;
+}
+async function copyText(text, msg="Copied"){
+  try{ await navigator.clipboard.writeText(text); toast(msg); }
+  catch{ const ta = document.createElement("textarea"); ta.value = text; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); try{ document.execCommand("copy"); toast(msg); }catch{ toast("Select the text to copy it"); } ta.remove(); }
+}
+const captionText = x => [x.caption, (x.hashtags||[]).join(" ")].filter(Boolean).join("\n\n");
+function collectComposer(id){
+  const el = id2 => document.getElementById(id2); if(!el("c_cap")) return;
+  const x = D().get(id); if(!x) return;
+  const plat = el("c_plat").value;
+  const next = {...clone(x), platform:plat, date:el("c_date").value, time:el("c_time").value, format:(FORMATS[plat]||[]).includes(el("c_fmt").value) ? el("c_fmt").value : (FORMATS[plat]||[""])[0],
+    vaultId:el("c_vault").value, caption:el("c_cap").value, hashtags:el("c_tags").value.split(/[\s,]+/).filter(Boolean).map(t=>t.startsWith("#")?t:"#"+t), notes:el("c_notes").value};
+  if(JSON.stringify(next) !== JSON.stringify(x)) put(id, next);
+}
+function kitText(){
+  const k = kitData(); const lines = [`${k.name} — ${k.creatorType||"Creator"}`, k.kit.headline||"", "",
+    `Followers: ${fmtN(k.total)} across ${k.platforms.map(p=>`${pname(p.k)} ${fmtN(p.followers)}`).join(", ")}`,
+    `Monthly reach: ${fmtN(k.reach30)}`, k.er!=null?`Engagement rate: ${pct(k.er)}`:"", k.growth90!=null?`90-day growth: +${pct(k.growth90,0)}`:""];
+  if(k.audience) lines.push(`Audience: mostly ${k.audience.ages.slice().sort((a,b)=>b.share-a.share)[0].name}, ${pct(k.audience.gender.women,0)} women; top cities ${k.audience.cities.map(c=>c.name).join(", ")}`);
+  if(k.kit.offer) lines.push("", "Work with me:", ...k.kit.offer.split("\n").filter(Boolean).map(l=>"• "+l));
+  if(k.kit.past) lines.push("", "Past work:", ...k.kit.past.split("\n").filter(Boolean).map(l=>"• "+l));
+  if(k.kit.contact) lines.push("", `Contact: ${k.kit.contact}`);
+  if(k.sample) lines.unshift("[SAMPLE DATA — NOT REAL METRICS]");
+  return lines.filter((l,i,a) => l!=="" || a[i-1]!=="").join("\n");
+}
+async function publishKit(){
+  if(!S.kits) return;
+  const p = profile(); const code = p.kitCode || Math.random().toString(36).slice(2,10);
+  try{
+    await S.kits.save({code, ...JSON.parse(JSON.stringify(kitData()))});
+    if(!p.kitCode) put("profile", {...clone(p), kitCode:code});
+    toast("Shareable link is live");
+  }catch(e){ toast(saveErr(e)); }
+}
+
+document.addEventListener("input", e => {
+  if(e.target.id === "w_hours"){ const o = $("#w_hours_out"); if(o) o.textContent = e.target.value; }
+  if(e.target.id === "c_cap" || e.target.id === "c_tags"){ const o = $("#c_count"); if(o) o.innerHTML = countHtml($("#c_plat").value, $("#c_fmt").value, $("#c_cap").value, $("#c_tags").value.split(/[\s,]+/).filter(Boolean).map(t=>t.startsWith("#")?t:"#"+t)); }
+});
+document.addEventListener("change", e => {
+  if((e.target.id === "c_plat" || e.target.id === "c_fmt") && UI.open){ collectComposer(UI.open); }
+  if(e.target.dataset?.act === "wplat"){ wizCollect(); const k = e.target.dataset.k; const w = UI.draft; w.platforms = e.target.checked ? [...new Set([...w.platforms,k])] : w.platforms.filter(x=>x!==k); render(); }
+});
+document.addEventListener("click", async ev => {
+  const b = ev.target.closest("[data-go],[data-act]"); if(!b || b.tagName === "INPUT") return;
+  if(b.dataset.go){ if(UI.open) collectComposer(UI.open); go(b.dataset.go); return; }
+  const a = b.dataset.act, id = b.dataset.id; const x = id ? D().get(id) : null;
+  switch(a){
+    case "sample": S.sampleMode = true; S.sampleDocs = sampleWorkspace(); UI.tab = "dash"; render(); window.scrollTo({top:0}); break;
+    case "exitSample": S.sampleMode = false; UI.open = null; UI.tab = "dash"; render(); window.scrollTo({top:0}); break;
+    case "startWiz": if(MODE==="supabase" && !S.uid){ UI.signin = true; render(); break; } startWizard(); render(); break;
+    case "wpick": wizCollect(); UI.draft[b.dataset.f] = b.dataset.v; render(); break;
+    case "wtoggle": { wizCollect(); const f = b.dataset.f, v = b.dataset.v; const arr = UI.draft[f]; UI.draft[f] = arr.includes(v) ? arr.filter(z=>z!==v) : [...arr, v]; render(); break; }
+    case "wback": wizCollect(); UI.wiz = Math.max(0, UI.wiz-1); render(); break;
+    case "wnext": {
+      wizCollect(); const w = UI.draft;
+      if(UI.wiz===1 && !w.name){ toast("Add your name first."); return; }
+      if(UI.wiz===3 && !w.platforms.length){ toast("Pick at least one platform."); return; }
+      if(UI.wiz < 4){ UI.wiz++; render(); window.scrollTo({top:0}); return; }
+      const connections = {}; w.platforms.forEach(k => connections[k] = w.connections[k] || "demo");
+      let gp = w.goalPlatform; if(gp !== "all" && !w.platforms.includes(gp)) gp = w.platforms[0];
+      put("profile", {name:w.name, creatorType:w.creatorType, world:w.world, audience:w.audience, tone:w.tone, goal:w.goal, goalDate:w.goalDate, goalPlatform:gp, why:w.why, campaign:w.campaign,
+        platforms:w.platforms, handles:Object.fromEntries(w.platforms.map(k=>[k, w.handles[k]||""])), connections, hours:w.hours, enjoy:w.enjoy, onboarded:true, kit:{}, createdAt:Date.now()});
+      UI.wiz = 0; UI.tab = "dash"; render(); window.scrollTo({top:0}); toast("Your workspace is ready. Build your plan next."); break; }
+    case "signinSend": {
+      const email = ($("#si_email")?.value||"").trim(); if(!/^\S+@\S+\.\S+$/.test(email)){ toast("Enter a valid email address."); return; }
+      UI.busy.signin = true; render();
+      const { error } = await S.sb.auth.signInWithOtp({ email, options:{ emailRedirectTo: location.origin + location.pathname } });
+      UI.busy.signin = false; if(error){ toast("Couldn't send the link. Wait a minute and try again."); render(); return; }
+      UI.signinSent = email; render(); break; }
+    case "signinBack": if(UI.signinSent) UI.signinSent = null; else UI.signin = false; render(); break;
+    case "signout": await S.sb.auth.signOut(); UI.tab = "dash"; UI.wiz = 0; UI.signin = false; render(); break;
+    case "aplat": UI.aPlat = b.dataset.k; render(); break;
+    case "strategy": strategy(); break;
+    case "fillTwoWeeks": fillTwoWeeks(); break;
+    case "qf": UI.qFilter = b.dataset.f; render(); break;
+    case "newPost": { const p = profile(); const nid = rid("p"); const k = (p.platforms||["ig"])[0]; put(nid, {platform:k, date:ymd(addDays(new Date(),1)), time:"19:00", format:(FORMATS[k]||[""])[0], vaultId:"", status:"draft", caption:"", hashtags:[], notes:"", suggestions:[]}); UI.open = nid; UI.img = null; render(); break; }
+    case "vaultPost": { const p = profile(); const nid = rid("p"); const k = (p.platforms||["ig"])[0]; put(nid, {platform:k, date:ymd(addDays(new Date(),1)), time:"19:00", format:(FORMATS[k]||[""])[0], vaultId:id, status:"draft", caption:"", hashtags:[], notes:"", suggestions:[]}); UI.open = nid; UI.img = null; go("queue"); break; }
+    case "open": if(UI.open && UI.open !== id) collectComposer(UI.open); UI.open = id; UI.img = null; render(); window.scrollTo({top:0, behavior:"smooth"}); break;
+    case "close": collectComposer(UI.open); UI.open = null; render(); break;
+    case "saveDraft": collectComposer(id); UI.open = null; render(); toast("Saved"); break;
+    case "saveApprove": { collectComposer(id); const cur = D().get(id); if(!cur.caption){ toast("Write or pick a caption before approving."); return; } if(overLimit(cur)){ toast(`Too long for ${pname(cur.platform)}. Trim it before approving.`); return; } put(id, {...clone(cur), status:"approved"}); UI.open = null; render(); toast("Approved"); break; }
+    case "approve": if(overLimit(x)){ toast(`Too long for ${pname(x.platform)}. Open it and trim it first.`); return; } put(id, {...clone(x), status:"approved"}); toast("Approved"); break;
+    case "schedule": if(profile().connections?.[x.platform]==="demo"){ put(id, {...clone(x), status:"scheduled"}); toast(`Scheduled (simulated): ${PLATFORMS[x.platform].route.toLowerCase()}`); } else { put(id, {...clone(x), status:"published", publishedAt:Date.now()}); toast("Marked posted"); } break;
+    case "copy": copyText(captionText(x), "Caption copied"); break;
+    case "suggest": suggest(id); break;
+    case "useSugg": { collectComposer(id); const cur = D().get(id); const s = cur.suggestions[Number(b.dataset.i)]; put(id, {...clone(cur), caption: s.hook && !s.caption.includes(s.hook) ? `${s.hook}\n\n${s.caption}` : s.caption, hashtags:s.hashtags}); toast("Added to your caption. Make it yours."); break; }
+    case "useTags": { collectComposer(id); const cur = D().get(id); put(id, {...clone(cur), hashtags:cur.suggestions[Number(b.dataset.i)].hashtags}); break; }
+    case "pickImg": if(UI.open) collectComposer(UI.open); $("#imgPick").click(); break;
+    case "askDel": UI.confirm = id; render(); break;
+    case "cancelDel": UI.confirm = null; render(); break;
+    case "delete": UI.confirm = null; if(UI.open===id) UI.open = null; del(id); toast("Deleted"); break;
+    case "export": {
+      const list = posts().filter(p=>effStatus(p)==="approved"); const q = s => `"${String(s??"").replace(/"/g,'""')}"`;
+      const csv = ["Date,Time,Platform,Format,Caption"].concat(list.map(p => [p.date, p.time, pname(p.platform), p.format, captionText(p)].map(q).join(","))).join("\n");
+      if(S.downloads){ try{ await S.downloads.save({filename:`rollout-approved-${today()}.csv`, data:new Blob([csv],{type:"text/csv"})}); break; }catch{} }
+      UI.csv = csv; render(); break; }
+    case "copyCsv": copyText(UI.csv); break;
+    case "closeCsv": UI.csv = null; render(); break;
+    case "newVault": UI.vaultEdit = "new"; render(); break;
+    case "editVault": UI.vaultEdit = id; render(); break;
+    case "cancelVault": UI.vaultEdit = null; render(); break;
+    case "saveVault": { const t = $("#v_title").value.trim(); if(!t){ toast("Give it a title first."); return; }
+      put(UI.vaultEdit === "new" ? rid("v") : UI.vaultEdit, {title:t, type:$("#v_type").value, era:$("#v_era").value.trim(), link:$("#v_link").value.trim(), notes:$("#v_notes").value.trim()});
+      UI.vaultEdit = null; render(); toast("Saved to vault"); break; }
+    case "logGrowth": { const date = $("#g_date").value || today(); let n = 0;
+      (profile().platforms||[]).forEach(k => { const v = document.getElementById("g_"+k)?.value; if(v){ put(`g_${date}_${k}`, {date, platform:k, followers:Number(v)}); n++; } });
+      toast(n ? "Counts saved" : "Enter at least one count."); break; }
+    case "saveKit": { const p = profile(); put("profile", {...clone(p), kit:{headline:$("#k_head").value.trim(), offer:$("#k_offer").value.trim(), past:$("#k_past").value.trim(), contact:$("#k_contact").value.trim()}}); toast("Pitch saved"); break; }
+    case "copyKit": copyText(kitText(), "Media kit copied"); break;
+    case "publishKit": publishKit(); break;
+    case "copyLink": copyText(kitLink(profile().kitCode), "Link copied"); break;
+    case "leaveKit": UI.kitView = null; render(); break;
+    case "saveSettings": {
+      const p = profile(); const plats = PKEYS.filter(k => $("#s_on_"+k).checked); if(!plats.length){ toast("Keep at least one platform."); return; }
+      const connections = {}; const handles = {}; plats.forEach(k => { connections[k] = $("#s_c_"+k).value; handles[k] = $("#s_h_"+k).value.trim(); });
+      let gp = $("#s_gplat").value; if(gp!=="all" && !plats.includes(gp)) gp = plats[0];
+      put("profile", {...clone(p), name:$("#s_name").value.trim()||p.name, creatorType:$("#s_type").value, world:$("#s_world").value, audience:$("#s_aud").value, tone:$("#s_tone").value, campaign:$("#s_camp").value,
+        goal:Number($("#s_goal").value)||p.goal, goalDate:$("#s_gdate").value||p.goalDate, goalPlatform:gp, hours:Number($("#s_hours").value)||p.hours, platforms:plats, connections, handles});
+      toast("Settings saved"); break; }
+    case "askReset": UI.confirm = "reset"; render(); break;
+    case "reset": UI.confirm = null; [...S.docs.keys()].forEach(k => del(k)); if(S.kits) Promise.resolve(S.kits.remove()).catch(()=>{}); UI.tab = "dash"; render(); toast("Workspace deleted"); break;
+  }
+});
+$("#imgPick").addEventListener("change", e => { const f = e.target.files?.[0]; if(f){ UI.img = f; render(); } e.target.value = ""; });
+
+/* ================= boot ================= */
+const hashKit = (() => { try{ const m = location.hash.match(/^#kit-([a-z0-9]+)$/); return m ? m[1] : null; }catch{ return null; } })();
+if(hashKit) UI.kitView = "loading";
+const blobToB64 = b => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(b); });
+
+async function bootClaude(){
+  const [db, user, sample, downloads] = await Promise.all(["db","user","sample","downloads"].map(n => window.claude.use(n).catch(()=>null)));
+  S.downloads = downloads; S.db = db; S.user = user;
+  if(sample){ S.sample = sample; try{ const lim = await sample.limits(); S.canImg = !!lim?.images; if(lim?.images) $("#imgPick").accept = lim.images.mediaTypes.join(","); }catch{} }
+  if(user){ S.uid = await user.id().catch(()=>null); try{ S.me = await user.me(); }catch{} }
+  if(db && S.uid){
+    const uid = S.uid;
+    S.kits = { save: d => db.doc("kits/" + uid).set(d), remove: () => db.doc("kits/" + uid).delete() };
+  }
+  if(hashKit){
+    if(db){ try{ const snap = await db.collection("kits").where("code","==",hashKit).limit(1).get(); UI.kitView = snap.empty ? "missing" : snap.docs[0].data(); }catch{ UI.kitView = "missing"; } }
+    else UI.kitView = "missing";
+  }
+  if(db && S.uid){
+    try{
+      S.col = db.collection("data/users/" + S.uid);
+      let first = true;
+      S.col.limit(1000).onSnapshot(snap => {
+        const local = first ? new Map(S.docs) : null;
+        S.docs = new Map(snap.docs.map(d => [d.id, d.data()])); S.mode = "cloud";
+        if(first && snap.empty && local.size){ for(const [k,v] of local){ S.docs.set(k,v); serial(k, () => S.col.doc(k).set(v)).catch(()=>{}); } }
+        first = false; S.ready = true; render(true);
+      }, () => { S.mode = "local"; loadLocal(); S.ready = true; render(true); });
+    }catch{ S.mode = "local"; S.ready = true; }
+  } else S.ready = true;
+  render(true);
+}
+
+async function aiCall(prompt, opts={}){
+  const images = [];
+  for(const f of [].concat(opts.images || [])){
+    if(f.size > 4.5*1024*1024) throw {code:"image_too_big"};
+    images.push({media_type: f.type || "image/jpeg", data: await blobToB64(f)});
+  }
+  const { data, error } = await S.sb.functions.invoke("rollout-ai", { body:{ prompt, tier: opts.modelTier || "default", images } });
+  if(error){
+    const status = error.context?.status; let body = null; try{ body = await error.context.json(); }catch{}
+    throw {code: body?.code || (status===429 ? "rate_limited" : status===401 ? "signed_out" : "unavailable")};
+  }
+  return data?.result;
+}
+
+async function bootSupabase(){
+  const sb = window.supabase.createClient(CFG.supabaseUrl, CFG.supabaseKey);
+  S.sb = sb;
+  if(hashKit){ const { data, error } = await sb.rpc("get_media_kit", { kit_code: hashKit }); UI.kitView = !error && data ? data : "missing"; render(); }
+  let current = undefined;
+  const apply = async session => {
+    const uid = session?.user?.id || null;
+    if(uid === current) return; current = uid;
+    if(!uid){ S.uid = null; S.docs = new Map(); S.mode = "local"; S.sample = null; S.kits = null; S.col = null; S.canImg = false; S.ready = true; render(true); return; }
+    S.uid = uid; S.me = { name:"", email: session.user.email };
+    const { data, error } = await sb.from("rollout_docs").select("id,data").limit(5000);
+    if(error) toast("Couldn't load your workspace. Refresh to try again.");
+    S.docs = new Map((data || []).map(r => [r.id, r.data])); S.mode = "cloud";
+    S.col = { doc: id => ({
+      set: async d => { const { error } = await sb.from("rollout_docs").upsert({ user_id: uid, id, data: d, updated_at: new Date().toISOString() }); if(error) throw {code:"unavailable"}; },
+      delete: async () => { const { error } = await sb.from("rollout_docs").delete().eq("user_id", uid).eq("id", id); if(error) throw {code:"unavailable"}; }
+    }) };
+    S.kits = {
+      save: async d => { const { error } = await sb.from("media_kits").upsert({ user_id: uid, code: d.code, data: d, updated_at: new Date().toISOString() }); if(error) throw {code:"unavailable"}; },
+      remove: async () => { await sb.from("media_kits").delete().eq("user_id", uid); }
+    };
+    S.sample = { json: aiCall, limits: async () => ({ images:{ maxCount:3, mediaTypes:["image/jpeg","image/png","image/webp","image/gif"] } }) };
+    S.canImg = true; $("#imgPick").accept = "image/jpeg,image/png,image/webp,image/gif";
+    S.ready = true; UI.signin = false; UI.signinSent = null;
+    if(!S.docs.get("profile")?.onboarded && !UI.wiz && !S.sampleMode) startWizard();
+    render(true);
+  };
+  const { data:{ session } } = await sb.auth.getSession();
+  await apply(session);
+  sb.auth.onAuthStateChange((_event, session) => { setTimeout(() => apply(session), 0); });
+}
+
+if(MODE !== "supabase") loadLocal();
+S.ready = MODE === "local";
+setTimeout(() => { if(!S.ready){ S.ready = true; render(); } }, 8000);
+render();
+if(MODE === "claude") bootClaude();
+else if(MODE === "supabase") bootSupabase().catch(() => { S.ready = true; toast("Couldn't reach the server. Refresh to try again."); render(); });
+else if(hashKit){ UI.kitView = "missing"; render(); }
+})();
+</script>
