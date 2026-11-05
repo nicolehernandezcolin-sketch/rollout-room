@@ -27,56 +27,43 @@ Rollout Room is built so creators keep control of their work, including keeping 
 - **Recovery code:** you get one at sign-up. It's the only way back in if you forget your password; without it, a reset starts you over with an empty workspace. You can make a new code in Settings.
 - **Stay unlocked on this device:** optional. The key is kept in the browser in a form scripts can't export. Signing out removes it.
 - **What isn't encrypted:** your email address, the names of items (e.g. "post" or "vault item", not their content), and your media kit once you publish a link, because partners need to read it.
-- **AI:** when you ask for suggestions or a plan, the details needed for that request go over HTTPS to Claude's API to write the answer. Nothing is stored on the server afterwards, and Anthropic doesn't train its models on API data by default.
+- **No AI on your content:** the live site's caption ideas and plans are worked out from your own numbers in your browser. Nothing is sent to an AI service.
+- **Posting:** when a post is sent, its caption and media go to Upload-Post and the platform. Attached photos and videos sit in a private folder until they're posted, then are deleted; they aren't end-to-end encrypted, because Upload-Post and the platform need to read them.
 - **Delete:** Settings → Delete my account removes the account and everything in it.
 
-## Demo mode vs. connected mode
+## How it runs
 
-With `config.js` empty, the site runs as a **demo**: everything works with sample data and saves in your browser, but Claude suggestions, AI plans and media kit links are turned off.
+The live site is connected to its own Supabase project (`rollout-room`, ref `sxrkvqbrpwinhxsmdlad`): password accounts, end-to-end encrypted workspaces, media kit links and the posting function are all on. With `config.js` emptied, the same page runs as a browser-only demo with sample data.
 
-Connecting a Supabase project turns on password-protected accounts with an end-to-end encrypted workspace, saving across devices, Claude suggestions and plans, and shareable media kit links.
+Social accounts connect through [Upload-Post](https://www.upload-post.com), a posting service that already has Instagram, TikTok, YouTube, X and Threads approval. Each creator gets their own Upload-Post profile (named from their account id, never their email) and connects through Upload-Post's hosted page. Upload-Post's data policy says user content is never used to train AI.
 
-Instagram, TikTok, YouTube and X numbers are still **sample data** in both modes. Real connections need each platform's own sign-in (OAuth) and app review; see "Connecting the platforms" below.
+Caption ideas and the posting plan come from each creator's own numbers (their best-performing posts, strongest days and times, and which posting rhythm actually grew followers), not from an AI service.
 
-## Turn on accounts and Claude (one-time setup)
+### Turning on posting (one-time)
 
-1. Create a free project at [supabase.com](https://supabase.com).
-2. In the project's **SQL editor**, run everything in [`supabase/migrations/0001_rollout.sql`](supabase/migrations/0001_rollout.sql).
-3. In **Authentication → Sign In / Providers**, keep Email turned on with **Confirm email** enabled. In **Authentication → URL Configuration**, set the Site URL to `https://nicolehernandezcolin-sketch.github.io/rollout-room/` and add the same address under Redirect URLs.
-4. Get an API key at [console.anthropic.com](https://console.anthropic.com). Requests are billed to that account. Each creator is capped at 40 requests a day, which you can change with `DAILY_AI_LIMIT`.
-5. Install the Supabase CLI and deploy the two server functions. The project ref is in Project Settings → General.
+1. Sign up at [upload-post.com](https://www.upload-post.com) on the Basic plan or higher (TikTok isn't on the free plan) and copy your API key.
+2. Save it as a server secret by running this yourself, with your key in place of `YOUR_KEY`:
 
    ```bash
-   brew install supabase/tap/supabase
+   npx supabase secrets set UPLOAD_POST_API_KEY=YOUR_KEY --project-ref sxrkvqbrpwinhxsmdlad
    ```
 
-   ```bash
-   supabase login
-   ```
+That's all; the `social` function picks it up immediately.
 
-   ```bash
-   supabase link --project-ref YOUR_PROJECT_REF
-   ```
+### Server pieces
 
-   ```bash
-   supabase secrets set ANTHROPIC_API_KEY=YOUR_KEY
-   ```
+- `supabase/migrations/`: tables, row-level security, and the private `post-media` bucket. Apply with `npx supabase db push`.
+- `supabase/functions/social`: connect link, connected accounts, stats, publishing, status, cancel and disconnect, through Upload-Post.
+- `supabase/functions/delete-account`: removes the account, its Upload-Post profile and any waiting media.
+- `supabase/functions/rollout-ai`: optional Claude-written suggestions; not deployed.
 
-   ```bash
-   supabase functions deploy rollout-ai
-   ```
+Deploy a function with `npx supabase functions deploy NAME --project-ref sxrkvqbrpwinhxsmdlad --use-api`.
 
-   ```bash
-   supabase functions deploy delete-account
-   ```
+**Sign-up emails:** the project uses Supabase's built-in email for now, which only delivers to members of the Supabase team. Before inviting other creatives, set up custom SMTP (for example Resend, as Noter Sessions does).
 
-6. Put the project URL and publishable (anon) key in [`config.js`](config.js), then commit and push. GitHub Pages updates in about a minute.
+## Going direct to the platforms later
 
-The function uses Claude Opus 5 with server-side fallback on, so if a request is declined it retries on a fallback model inside the same call.
-
-## Connecting the platforms
-
-Each platform has its own developer program. The site would send people to the platform's sign-in, store the token on the server, publish approved posts at their scheduled time, and pull stats every night.
+Upload-Post handles the platform approvals today. Going direct means each platform's own developer program: the site would send people to the platform's sign-in, store the token on the server, publish approved posts at their scheduled time, and pull stats every night.
 
 | Platform | API | What it allows |
 |---|---|---|

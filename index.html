@@ -213,6 +213,7 @@ details summary{cursor:pointer;font-weight:600}
 </div>
 <div class="toast" id="toast" hidden></div>
 <input type="file" id="imgPick" accept="image/*" hidden>
+<input type="file" id="mediaPick" hidden>
 
 <script>
 (() => {
@@ -377,6 +378,7 @@ function connected(){ const p = profile(); if(!p) return []; return (p.platforms
 function dataFor(k){
   const p = profile(); const mode = p?.connections?.[k];
   if(mode === "demo") return genPlatform(k, (p.handles?.[k] || p.name || "x") + (S.sampleMode ? "sample" : ""));
+  if(mode === "live" && canLive(k)){ const a = D().get("an_"+k); return {source:"live", posts:a?.posts||[], daily:a?.series||[], perWeek:[], audience:a?.audience||null}; }
   const ci = checkins(k).map(g => ({date:g.date, v:Number(g.followers)}));
   return {source: ci.length ? "manual" : "none", posts:[], daily:ci, perWeek:[], audience:null};
 }
@@ -463,12 +465,10 @@ function insights(){
 }
 function audienceAll(){
   const ks = connected().filter(k => dataFor(k).audience); if(!ks.length) return null;
-  const w = ks.map(k => stats(k).followers); const tw = sum(w) || 1;
-  const ages = dataFor(ks[0]).audience.ages.map((a,i) => ({name:a.name, share: sum(ks.map((k,j) => dataFor(k).audience.ages[i].share*w[j]))/tw}));
-  const women = sum(ks.map((k,j) => dataFor(k).audience.gender.women*w[j]))/tw;
-  const cityMap = {}; ks.forEach((k,j) => dataFor(k).audience.cities.forEach(c => cityMap[c.name] = (cityMap[c.name]||0) + c.share*w[j]/tw));
-  const cities = Object.entries(cityMap).map(([name,share])=>({name,share})).sort((a,b)=>b.share-a.share).slice(0,5);
-  return {ages, gender:{women, men:1-women-.03, other:.03}, cities};
+  const w = ks.map(k => stats(k).followers || 1); const tw = sum(w) || 1;
+  const merge = get => { const m = {}; ks.forEach((k,j) => (get(dataFor(k).audience) || []).forEach(x => m[x.name] = (m[x.name]||0) + x.share*w[j]/tw)); return Object.entries(m).map(([name,share]) => ({name, share})); };
+  const women = sum(ks.map((k,j) => dataFor(k).audience.gender.women*w[j]))/tw, men = sum(ks.map((k,j) => dataFor(k).audience.gender.men*w[j]))/tw;
+  return {ages:merge(a => a.ages).sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric:true})), gender:{women, men, other:Math.max(0, 1-women-men)}, cities:merge(a => a.cities).sort((a,b) => b.share-a.share).slice(0,5)};
 }
 function anyDemo(){ const p = profile(); return !!p && Object.values(p.connections||{}).includes("demo"); }
 function metricsBrief(){
@@ -486,7 +486,7 @@ const UI = { tab:"dash", wiz:0, draft:null, aPlat:"all", qFilter:"open", open:nu
 try{ const t = localStorage.getItem(LS+"-tab"); if(t && TABS.some(x=>x.k===t)) UI.tab = t; }catch{}
 let toastT;
 function toast(msg){ const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(()=> t.hidden = true, 3400); }
-function go(tab){ UI.tab = tab; try{ localStorage.setItem(LS+"-tab", tab); }catch{} render(); window.scrollTo({top:0}); }
+function go(tab){ if(tab === "queue" || tab === "dash") setTimeout(() => checkPublishing(), 0); UI.tab = tab; try{ localStorage.setItem(LS+"-tab", tab); }catch{} render(); window.scrollTo({top:0}); }
 const aiOff = () => `<span class="muted small">${S.sampleMode ? "Create your own workspace to get suggestions from Claude." : MODE==="claude" ? "Suggestions use Claude. Open this page on claude.ai and allow Claude when asked." : MODE==="supabase" ? "Sign in to get suggestions from Claude." : "Suggestions turn on once this site is connected to its server (see the README)."}</span>`;
 
 /* ================= render ================= */
@@ -515,6 +515,11 @@ function render(preserve){
 function privacyShort(){
   return MODE==="supabase" ? "Your workspace is encrypted on your device before it's saved, so only you can read it. Nothing is used to train AI, and you can delete your account at any time."
     : "Your content and numbers stay yours. Nobody else can see your workspace, nothing is used to train AI, and you can delete everything at any time.";
+}
+function connOptions(k, mode){
+  const opts = MODE==="supabase" ? (canLive(k) ? [["live","Connect automatically"],["manual","I'll log numbers"]] : [["manual","I'll log numbers"]]) : [["demo","Sample data"],["manual","I'll log numbers"]];
+  const cur = opts.some(o => o[0]===mode) ? mode : opts[0][0];
+  return opts.map(([v,l]) => `<option value="${v}" ${v===cur?"selected":""}>${l}</option>`).join("");
 }
 const authInput = (id, label, type, extra="") => `<label class="field">${label}<input type="${type}" id="${id}" ${extra}></label>`;
 function vAuth(){
@@ -567,12 +572,12 @@ function vLanding(){
       <span class="label">For artists, musicians and creatives</span>
       <h1 style="margin-top:12px">Make it once.<br>Post it everywhere.</h1>
       <p class="lede">Rollout Room turns one post into versions for Instagram, TikTok, YouTube and X, schedules each at that platform's best time, and posts them all once you approve. Then your numbers show what worked, so your plan fits you and your goals.</p>
-      <div class="ctas"><button class="btn primary lg" data-act="startWiz">Create your workspace</button><button class="btn lg" data-act="sample">Look around with a sample creator</button></div>
+      <div class="ctas"><button class="btn primary lg" data-act="startWiz">Create your workspace</button><button class="btn lg" data-act="sample">${MODE==="supabase" ? "See an example first" : "Look around with a sample creator"}</button></div>
       <p class="muted small" style="margin-top:14px">${MODE==="claude" ? "" : MODE==="supabase" ? `Already have an account? <button class="btn ghost sm" data-act="authGo" data-to="signin" style="padding:0 4px">Sign in</button>` : "Your workspace is saved in this browser."}</p>
       <p class="muted small" style="margin-top:6px;max-width:44ch">${privacyShort()}</p>
     </div>
     <div class="loop">
-      <div><b>Post everywhere</b><span class="muted">One post becomes a version for every platform, each in the right format and length. Approve once and they all go out automatically.<br><span class="small">Auto-posting is simulated in this demo while the platform connections are approved.</span></span></div>
+      <div><b>Post everywhere</b><span class="muted">One post becomes a version for every platform, each in the right format and length. Approve once and they all go out automatically.<br><span class="small">${MODE==="supabase" ? "Connect Instagram, TikTok, YouTube, X and Threads in one step." : "Auto-posting is simulated in this demo while the platform connections are approved."}</span></span></div>
       <div><b>Goal</b><span class="muted">10,000 followers by Dec 31. The app works out the daily pace you need.</span></div>
       <div><b>Data</b><span class="muted">Instagram, TikTok, YouTube and X numbers in one place, separately and together.</span></div>
       <div><b>Plan</b><span class="muted">How often to post on each platform, which formats work and when, based on your own results.</span></div>
@@ -595,12 +600,13 @@ function vWizard(){
       <label class="field">Counted on<select id="w_gplat">${PKEYS.map(k=>`<option value="${k}" ${w.goalPlatform===k?"selected":""}>${pname(k)}</option>`).join("")}<option value="all" ${w.goalPlatform==="all"?"selected":""}>All platforms combined</option></select></label></div>
     <div class="stack" style="gap:8px"><span class="label">What the audience is for</span><div class="chips">${WHY.map(t=>`<button class="chip" data-act="wtoggle" data-f="why" data-v="${t}" aria-pressed="${w.why.includes(t)}">${t}</button>`).join("")}</div></div>
     <label class="field">What's coming next <span class="hint">The release or campaign you're warming people up for</span><input type="text" id="w_camp" value="${esc(w.campaign)}"></label>`;
-  if(step === 3) body = `<h2>Connect your platforms</h2>
-    <p class="muted small">In this demo, connecting loads <b>sample data</b> so you can see the dashboard working. You can also log your real follower counts yourself. Real connections are on the roadmap. See Settings → How connecting works.</p>
-    <div>${PKEYS.map(k => { const on = w.platforms.includes(k); const mode = w.connections[k] || "demo"; return `<div class="conn">
+  if(step === 3) body = `<h2>Your platforms</h2>
+    ${MODE==="supabase" ? `<p class="muted small">Right after setup, you'll connect these in one step through Upload-Post, a posting service whose policy says your content is never used to train AI. You sign in to each platform yourself; Rollout Room never sees your social passwords.</p>`
+      : `<p class="muted small">In this demo, connecting loads <b>sample data</b> so you can see the dashboard working. You can also log your real follower counts yourself.</p>`}
+    <div>${PKEYS.map(k => { const on = w.platforms.includes(k); const mode = w.connections[k] || (MODE==="supabase" ? "live" : "demo"); return `<div class="conn">
       <label class="plat"><input type="checkbox" data-act="wplat" data-k="${k}" ${on?"checked":""}> ${dot(k)} ${pname(k)}</label>
       <input type="text" id="w_h_${k}" value="${esc(w.handles[k]||"")}" placeholder="@handle" ${on?"":"disabled"}>
-      <select id="w_c_${k}" ${on?"":"disabled"}><option value="demo" ${mode==="demo"?"selected":""}>Sample data</option><option value="manual" ${mode==="manual"?"selected":""}>I'll log numbers</option></select>
+      <select id="w_c_${k}" ${on?"":"disabled"}>${connOptions(k, mode)}</select>
     </div>`; }).join("")}</div>`;
   if(step === 4) body = `<h2>How much time do you have?</h2>
     <label class="field">Hours a week for content <span class="mono" style="font-size:1.4rem;font-family:var(--display)" id="w_hours_out">${w.hours}</span><input type="range" id="w_hours" min="1" max="25" value="${w.hours}"></label>
@@ -697,6 +703,8 @@ function vDash(){
   const onTrack = g.projected!=null && g.projected >= g.goal;
   const ins = insights(); const queued = posts().filter(x => x.status!=="published" && x.date >= today()).slice(0,4);
   return `<div class="stack-lg">
+    ${MODE==="supabase" && !S.sampleMode && !LIVE_KEYS.some(isLive) ? `<div class="banner"><span><b>Connect your accounts</b> to see your real numbers and post everywhere at once.</span><button class="btn primary sm" data-act="connectAccounts" ${UI.busy.connect?"disabled":""}>${UI.busy.connect?"Opening…":"Connect accounts"}</button></div>` : ""}
+    ${LIVE_KEYS.some(isLive) ? `<div class="spread small muted"><span>Live numbers${D().get("an_"+LIVE_KEYS.find(isLive))?.at ? ", updated " + new Date(Math.min(...LIVE_KEYS.filter(isLive).map(k => D().get("an_"+k)?.at || Date.now()))).toLocaleString(undefined,{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}) : ""}</span><button class="btn sm" data-act="syncNow" ${UI.busy.sync?"disabled":""}>${UI.busy.sync?"Updating…":"Refresh numbers"}</button></div>` : ""}
     ${anyDemo() ? `<div class="banner warn"><span><b>Sample data.</b> These numbers are generated so you can try the dashboard. Switch a platform to “I'll log numbers” in Settings to track your real counts.</span></div>` : ""}
     <div class="panel stack">
       <div class="spread"><div><span class="label">${esc(g.label)} goal</span><h2 style="margin-top:4px"><span class="mono">${fmtN(g.cur)}</span> <span class="muted" style="font-weight:500">/ ${fmtN(g.goal)} by ${fmtDay(p.goalDate)}</span></h2></div>
@@ -717,10 +725,10 @@ function vDash(){
     </div>
     <div class="stack"><div class="spread"><h2>By platform</h2><button class="btn ghost sm" data-go="analytics">Full analytics →</button></div>
       <div class="grid3">${ss.map(s => { const c = cadence(s.k); const f = formatStats(s.k)[0]; return `<div class="pcard">
-        <div class="spread"><span class="plat">${dot(s.k)} ${pname(s.k)}</span><span class="label">${s.source==="demo"?"Sample":s.source==="manual"?"Logged":"No data"}</span></div>
+        <div class="spread"><span class="plat">${dot(s.k)} ${pname(s.k)}</span><span class="label">${s.source==="demo"?"Sample":s.source==="live"?(isLive(s.k)?"Live":"Not connected"):s.source==="manual"?"Logged":"No data"}</span></div>
         <span class="big">${fmtN(s.followers)}</span>
         <div class="kv"><span>30-day change</span><span class="${(s.gain||0)>=0?"up":"down"}">${s.gain==null?"—":sgn(s.gain)}</span>
-          <span>Engagement</span><span>${s.reach?pct(s.er):"—"}</span><span>Posts, 30d</span><span>${s.source==="demo"?s.posts:"—"}</span>
+          <span>Engagement</span><span>${s.reach?pct(s.er):"—"}</span><span>Posts, 30d</span><span>${s.source==="demo"||s.source==="live"?s.posts:"—"}</span>
           <span>Best format</span><span>${f?esc(f.format):"—"}</span><span>Best cadence</span><span>${c?`${c.rec}× / week`:"—"}</span></div></div>`; }).join("") || `<div class="empty">Connect a platform in Settings.</div>`}</div></div>
     ${ins.length ? `<div class="stack"><h2>What your data says</h2><div class="grid3">${ins.map(i => `<div class="insight">${i.k?`<span class="plat small">${dot(i.k)} ${pname(i.k)}</span>`:`<span class="label">All platforms</span>`}<b>${esc(i.t)}</b><span class="src">${esc(i.s)}</span></div>`).join("")}</div></div>` : ""}
     <div class="stack"><div class="spread"><h2>Up next</h2><button class="btn ghost sm" data-go="queue">Open queue →</button></div>
@@ -769,10 +777,10 @@ function vAnalytics(){
 /* ---------- Plan ---------- */
 function vPlan(){
   const s = D().get("strategy"); const p = profile();
-  const btn = `<button class="btn ${s?"":"primary"}" data-act="strategy" ${UI.busy.strat||!S.sample?"disabled":""}>${UI.busy.strat?"Building…":s?"Rebuild from latest data":"Build my plan"}</button>`;
+  const btn = `<button class="btn ${s?"":"primary"}" data-act="strategy" ${UI.busy.strat?"disabled":""}>${UI.busy.strat?"Building…":s?"Rebuild from latest data":"Build my plan"}</button>`;
   const head = `<div class="spread"><div><h2>Plan</h2><p class="muted small">Built from your goal, your ${p.hours}-hour weekly budget, and what your numbers show works.</p></div>${btn}</div>`;
   if(!s) return `<div class="stack">${head}${UI.busy.strat?`<span class="working">Reading your numbers, then writing cadence, pillars and a runway to your launch…</span>`:""}
-    <div class="empty">Claude reads your dashboard (followers, formats, best times, cadence, audience) and writes a posting plan for each platform that fits your time, plus content pillars, world-building and a runway to ${esc(p.campaign||"your next launch")}.${S.sample?"":"<br><br>"+aiOff()}</div></div>`;
+    <div class="empty">${S.sample ? `Claude reads your dashboard (followers, formats, best times, cadence, audience) and writes a posting plan for each platform that fits your time, plus content pillars, world-building and a runway to ${esc(p.campaign||"your next launch")}.` : "Rollout Room reads your numbers (which formats reach the most people, your strongest days and times, and how often posting actually paid off) and builds a weekly plan for each platform that fits your hours."}</div></div>`;
   const list = a => `<ul>${(a||[]).map(i=>`<li>${esc(i)}</li>`).join("")}</ul>`;
   return `<div class="stack">${head}${UI.busy.strat?`<span class="working">Rebuilding…</span>`:""}
   <div class="panel strat">
@@ -781,11 +789,11 @@ function vPlan(){
       <div class="table-wrap"><table><thead><tr><th>Platform</th><th class="num">Per week</th><th>Formats</th><th>When</th><th>Why (from your data)</th></tr></thead><tbody>
       ${(s.cadence||[]).map(c=>`<tr><td><span class="plat">${dot(c.platform)} ${pname(c.platform)}</span></td><td class="num">${esc(c.perWeek)}</td><td style="white-space:normal">${esc((c.formats||[]).join(", "))}</td><td style="white-space:normal">${esc(c.when)}</td><td style="white-space:normal;min-width:220px">${esc(c.why)}</td></tr>`).join("")}</tbody></table></div>
       ${s.hoursCheck?`<p class="muted small">${esc(s.hoursCheck)}</p>`:""}</section>
-    <section><h3>Content pillars</h3><div class="grid2">${(s.pillars||[]).map(x=>`<div style="background:var(--ground);border-radius:8px;padding:12px"><b>${esc(x.name)}</b><p class="muted small" style="margin-top:4px">${esc(x.what)}</p>${x.example?`<p class="small" style="margin-top:6px"><span class="label">Example</span> ${esc(x.example)}</p>`:""}</div>`).join("")}</div></section>
-    <section><h3>World-building rules</h3>${list(s.worldBuilding)}</section>
-    <section><h3>Experiments to run</h3><div class="table-wrap"><table><thead><tr><th>Test</th><th>Measure</th><th>For</th></tr></thead><tbody>${(s.experiments||[]).map(x=>`<tr><td style="white-space:normal">${esc(x.test)}</td><td style="white-space:normal">${esc(x.metric)}</td><td>${esc(x.duration)}</td></tr>`).join("")}</tbody></table></div></section>
-    <section><h3>Runway to launch</h3><div class="stack" style="gap:10px">${(s.runway||[]).map(r=>`<div class="rw"><div><b>${esc(r.window)}</b><p class="muted small">${esc(r.focus)}</p></div>${list(r.actions)}</div>`).join("")}</div></section>
-    <section><h3>Partnership angle</h3><p>${esc(s.partnerAngle)}</p></section>
+    ${(s.pillars||[]).length?`<section><h3>Content pillars</h3><div class="grid2">${(s.pillars||[]).map(x=>`<div style="background:var(--ground);border-radius:8px;padding:12px"><b>${esc(x.name)}</b><p class="muted small" style="margin-top:4px">${esc(x.what)}</p>${x.example?`<p class="small" style="margin-top:6px"><span class="label">Example</span> ${esc(x.example)}</p>`:""}</div>`).join("")}</div></section>`:""}
+    ${(s.worldBuilding||[]).length?`<section><h3>World-building rules</h3>${list(s.worldBuilding)}</section>`:""}
+    ${(s.experiments||[]).length?`<section><h3>Experiments to run</h3><div class="table-wrap"><table><thead><tr><th>Test</th><th>Measure</th><th>For</th></tr></thead><tbody>${(s.experiments||[]).map(x=>`<tr><td style="white-space:normal">${esc(x.test)}</td><td style="white-space:normal">${esc(x.metric)}</td><td>${esc(x.duration)}</td></tr>`).join("")}</tbody></table></div></section>`:""}
+    ${(s.runway||[]).length?`<section><h3>Runway to launch</h3><div class="stack" style="gap:10px">${(s.runway||[]).map(r=>`<div class="rw"><div><b>${esc(r.window)}</b><p class="muted small">${esc(r.focus)}</p></div>${list(r.actions)}</div>`).join("")}</div></section>`:""}
+    ${s.partnerAngle?`<section><h3>Partnership angle</h3><p>${esc(s.partnerAngle)}</p></section>`:""}
   </div></div>`;
 }
 
@@ -805,18 +813,22 @@ function mapFormat(fmt, k){
 }
 const siblings = x => x.group ? posts().filter(p => p.group === x.group) : [x];
 function postRow(x){
-  const st = effStatus(x); const late = st!=="published" && x.date < today();
+  const st = effStatus(x); const late = ["draft","approved"].includes(st) && x.date < today(); const live = isLive(x.platform); const pub = UI.busy["pub_"+x.id];
   const v = x.vaultId ? D().get(x.vaultId) : null;
   return `<div class="post">
-    <div class="meta"><span class="plat">${dot(x.platform)} ${pname(x.platform)}</span><span class="pill ${late?"late":st}">${late?"Missed":st==="draft"?"Needs approval":st}</span>
+    <div class="meta"><span class="plat">${dot(x.platform)} ${pname(x.platform)}</span><span class="pill ${late||st==="failed"?"late":st}">${late?"Missed":st==="draft"?"Needs approval":st==="failed"?"Didn't post":st}</span>
       <span class="muted mono">${x.date?fmtDay(x.date):"No date"}${x.time?" · "+esc(x.time):""}</span>${x.format?`<span class="muted">· ${esc(x.format)}</span>`:""}${v?`<span class="muted">· ${esc(v.title)}</span>`:""}
       ${siblings(x).length>1?`<span class="pill" title="${esc(siblings(x).map(p=>pname(p.platform)).join(", "))}">${siblings(x).map(p=>dot(p.platform)).join("")} ${siblings(x).length}-platform drop</span>`:""}</div>
     <div class="cap ${x.caption?"":"none"}">${x.caption ? esc(x.caption) : (x.notes ? esc(x.notes) : "No caption yet")}</div>
     ${x.hashtags?.length?`<div class="tags">${esc(x.hashtags.join(" "))}</div>`:""}
+    ${st==="failed" && x.error ? `<p class="small" style="color:var(--warn)">${esc(x.error)}</p>` : ""}
     <div class="actions">
       <button class="btn sm" data-act="open" data-id="${x.id}">Open</button>
       ${st==="draft"?`<button class="btn primary sm" data-act="approve" data-id="${x.id}" ${x.caption?"":"disabled title=\"Write or pick a caption first\""}>Approve</button>`:""}
-      ${st==="approved"?`<button class="btn primary sm" data-act="schedule" data-id="${x.id}">${profile()?.connections?.[x.platform]==="demo"?"Schedule":"Mark posted"}</button>`:""}
+      ${st==="approved"?`<button class="btn primary sm" data-act="schedule" data-id="${x.id}" ${pub?"disabled":""}>${pub?"Sending…":live?((x.date+" "+(x.time||"00:00")) <= nowStamp() ? "Post now" : "Schedule"):profile()?.connections?.[x.platform]==="demo"?"Schedule":"Mark posted"}</button>`:""}
+      ${st==="scheduled" && live && x.jobId ? `<button class="btn ghost sm" data-act="unschedule" data-id="${x.id}">Cancel scheduling</button>` : ""}
+      ${st==="failed" ? `<button class="btn primary sm" data-act="retryPost" data-id="${x.id}" ${pub?"disabled":""}>Try again</button>` : ""}
+      ${x.url ? `<a class="btn ghost sm" href="${esc(x.url)}" target="_blank" rel="noopener">View post</a>` : ""}
       ${st!=="draft"?`<button class="btn sm" data-act="copy" data-id="${x.id}">Copy caption</button>`:""}
     </div></div>`;
 }
@@ -840,24 +852,29 @@ function composer(x){
         <span class="small" id="c_count">${countHtml(x.platform, x.format, x.caption, x.hashtags)}</span>
         <label class="field">Hashtags<input type="text" id="c_tags" value="${esc((x.hashtags||[]).join(" "))}" placeholder="#yourworld #genre"></label>
         <label class="field">Notes / idea<input type="text" id="c_notes" value="${esc(x.notes||"")}"></label>
+        ${isLive(x.platform) ? (() => { const kind = postKind(x.format); const up = UI.busy["up_"+x.id]; return `<div class="stack" style="gap:6px"><span class="label">${kind==="video"?"Video":kind==="photos"?"Photos":"Media"}</span>
+          ${(x.media||[]).map((m,i) => `<div class="row small"><span>${esc(m.name)}</span><span class="muted mono">${(m.size/1048576).toFixed(1)} MB</span><button class="btn ghost sm" data-act="rmMedia" data-id="${x.id}" data-i="${i}">Remove</button></div>`).join("")}
+          ${kind!=="text" ? `<div><button class="btn sm" data-act="pickMedia" data-id="${x.id}" ${up?"disabled":""}>${up?"Uploading…":kind==="video"?((x.media||[]).length?"Replace video":"Add video"):"Add photos"}</button></div>` : `<span class="muted small">Text post. No media needed.</span>`}
+          ${x.platform==="tt" && kind==="video" ? `<label class="row small" style="gap:8px"><input type="checkbox" id="c_ttdraft" ${x.tiktokDraft?"checked":""}> Send to my TikTok drafts instead, so I can add a sound in the app</label>` : ""}
+          <span class="muted small">Up to 50 MB each. Stored privately and deleted once it's posted.</span></div>`; })() : ""}
         ${(() => { const sib = siblings(x); const inGroup = new Set(sib.map(p=>p.platform)); const more = (p.platforms||[]).filter(k => !inGroup.has(k));
           const drafts = sib.filter(p => effStatus(p)==="draft");
           return `<div class="sugg"><span class="h">Post everywhere</span>
             ${sib.length>1?`<span class="small">This drop goes to ${sib.map(p => p.id===x.id ? `<b>${dot(p.platform)} ${pname(p.platform)}</b>` : `<button class="btn ghost sm" data-act="open" data-id="${p.id}" style="padding:0 4px">${dot(p.platform)} ${pname(p.platform)} · ${esc(p.time||"")}</button>`).join(" ")}</span>`:`<span class="small muted">Make a version of this post for your other platforms. Each one gets the right format and its platform's best time.</span>`}
             ${more.length?`<div class="row">${more.map(k => `<button class="btn sm" data-act="addPlatform" data-id="${x.id}" data-k="${k}">+ ${pname(k)}</button>`).join("")}${more.length>1?`<button class="btn sm" data-act="addAllPlatforms" data-id="${x.id}">+ All</button>`:""}</div>`:""}
             ${sib.length>1&&drafts.length?`<div><button class="btn primary sm" data-act="approveDrop" data-id="${x.id}">Approve all ${drafts.length} version${drafts.length===1?"":"s"}</button></div>`:""}</div>`; })()}
-        <p class="route">${dot(x.platform)} ${mode==="demo" ? `When scheduled: ${esc(PLATFORMS[x.platform].route)} <span class="demo-tag">simulated</span>` : `Not connected: you'll copy the caption and post it yourself.`}</p>
+        <p class="route">${dot(x.platform)} ${isLive(x.platform) ? `Posts automatically: ${esc(PLATFORMS[x.platform].route)}.${x.platform==="x"?" Links are removed from X posts unless the X Links add-on is on.":""}` : mode==="demo" ? `When scheduled: ${esc(PLATFORMS[x.platform].route)} <span class="demo-tag">simulated</span>` : canLive(x.platform) && !S.sampleMode ? `Connect ${pname(x.platform)} in Settings to post this automatically. Until then you'll copy the caption and post it yourself.` : `Not connected: you'll copy the caption and post it yourself.`}</p>
         <div class="row"><button class="btn primary" data-act="saveDraft" data-id="${x.id}">Save</button>
           ${x.status==="draft"?`<button class="btn" data-act="saveApprove" data-id="${x.id}">Save and approve</button>`:""}
           ${UI.confirm===x.id?`<button class="btn danger" data-act="delete" data-id="${x.id}">Confirm delete</button><button class="btn ghost" data-act="cancelDel">Keep</button>`:`<button class="btn ghost" data-act="askDel" data-id="${x.id}">Delete</button>`}</div>
       </div>
-      <div class="stack">
+      <div class="stack">${!S.sample ? bestIdeasHtml(x) : `
         <div class="spread"><span class="label">Suggestions</span><button class="btn sm" data-act="suggest" data-id="${x.id}" ${busy||!S.sample?"disabled":""}>${busy?"Thinking…":x.suggestions?.length?"More ideas":"Suggest captions"}</button></div>
         ${S.canImg?`<div class="row small"><button class="btn ghost sm" data-act="pickImg">${UI.img?"Change still":"Add a still frame"}</button>${UI.img?`<span class="muted">${esc(UI.img.name)}</span>`:""}</div>`:""}
         ${!S.sample?aiOff():""}
         ${busy?`<span class="working">Writing options in your voice…</span>`:""}
         ${(x.suggestions||[]).map((s,i) => `<div class="sugg">${s.hook?`<span class="h">${esc(s.hook)}</span>`:""}<span class="c">${esc(s.caption)}</span><span class="tags mono small" style="color:var(--accent)">${esc((s.hashtags||[]).join(" "))}</span>${s.why?`<span class="muted small">${esc(s.why)}</span>`:""}
-          <div class="row"><button class="btn sm" data-act="useSugg" data-id="${x.id}" data-i="${i}">Use as starting point</button><button class="btn ghost sm" data-act="useTags" data-id="${x.id}" data-i="${i}">Use hashtags only</button></div></div>`).join("") || (busy||!S.sample?"":`<p class="muted small">Ask for a few options to react to. Nothing is used unless you choose it.</p>`)}
+          <div class="row"><button class="btn sm" data-act="useSugg" data-id="${x.id}" data-i="${i}">Use as starting point</button><button class="btn ghost sm" data-act="useTags" data-id="${x.id}" data-i="${i}">Use hashtags only</button></div></div>`).join("") || (busy||!S.sample?"":`<p class="muted small">Ask for a few options to react to. Nothing is used unless you choose it.</p>`)}`}
       </div>
     </div></div>`;
 }
@@ -956,16 +973,18 @@ function vKitPublic(){
 function vSettings(){
   const p = profile();
   return `<div class="stack-lg">
-    <div class="panel stack"><h3>Connections</h3>
-      <div>${PKEYS.map(k => { const on = (p.platforms||[]).includes(k); const mode = p.connections?.[k] || "off"; return `<div class="conn">
+    <div class="panel stack"><div class="spread"><h3>Connections</h3>${MODE==="supabase" && !S.sampleMode ? `<div class="row"><button class="btn sm" data-act="refreshAccounts">Check again</button><button class="btn primary sm" data-act="connectAccounts" ${UI.busy.connect?"disabled":""}>${UI.busy.connect?"Opening…":LIVE_KEYS.some(isLive)?"Connect more":"Connect accounts"}</button></div>` : ""}</div>
+      ${MODE==="supabase" && !S.sampleMode ? `<p class="muted small">Connect opens Upload-Post's secure page, where you sign in to each platform yourself. Rollout Room never sees your social passwords and only posts what you approve. Upload-Post's policy says your content is never used to train AI.</p>` : ""}
+      <div>${PKEYS.map(k => { const on = (p.platforms||[]).includes(k); const mode = p.connections?.[k] || "off"; const a = liveAccounts()[k]; return `<div class="conn">
         <label class="plat"><input type="checkbox" id="s_on_${k}" ${on?"checked":""}> ${dot(k)} ${pname(k)}</label>
-        <input type="text" id="s_h_${k}" value="${esc(p.handles?.[k]||"")}" placeholder="@handle">
-        <select id="s_c_${k}"><option value="demo" ${mode==="demo"?"selected":""}>Sample data</option><option value="manual" ${mode==="manual"?"selected":""}>I'll log numbers</option></select></div>`; }).join("")}</div>
+        ${MODE==="supabase" && canLive(k) && a ? `<span class="small">${a.reauth?`<b style="color:var(--warn)">Reconnect needed</b>`:`Connected as <b>${esc(a.handle||a.name||"your account")}</b>`} ${UI.confirm==="dc_"+k?`<button class="btn danger sm" data-act="disconnect" data-k="${k}">Disconnect</button><button class="btn ghost sm" data-act="cancelDel">Keep</button>`:`<button class="btn ghost sm" data-act="askDisconnect" data-k="${k}">Disconnect</button>`}<input type="hidden" id="s_h_${k}" value="${esc(p.handles?.[k]||"")}"></span>`
+          : `<input type="text" id="s_h_${k}" value="${esc(p.handles?.[k]||"")}" placeholder="@handle">`}
+        <select id="s_c_${k}">${connOptions(k, mode)}</select></div>`; }).join("")}</div>
       <details class="small"><summary>How connecting works</summary>
         <div class="stack" style="margin-top:10px">
-          <p>In the full product, “Connect” opens each platform's own sign-in (OAuth). Rollout Room never sees your password; the platform hands it a token that a server stores securely.</p>
+          <p>${MODE==="supabase" ? "“Connect accounts” opens Upload-Post's page, where you sign in to each platform with its own login (OAuth). The platform gives Upload-Post a token to post for you; Rollout Room never sees your social passwords." : "In the full product, “Connect” opens each platform's own sign-in (OAuth). Rollout Room never sees your password; the platform hands it a token that a server stores securely."}</p>
           ${PKEYS.map(k=>`<p><b>${pname(k)}</b> — ${esc(PLATFORMS[k].api)}. ${esc(PLATFORMS[k].route)}.</p>`).join("")}
-          <p class="muted">Each platform reviews apps before they can post or read insights for other people's accounts. This demo simulates that part with sample data.</p>
+          <p class="muted">${MODE==="supabase" ? "Facebook isn't connected yet; you can log its numbers. Links in X posts are removed unless the X Links add-on is turned on in Upload-Post." : "Each platform reviews apps before they can post or read insights for other people's accounts. This demo simulates that part with sample data."}</p>
         </div></details>
     </div>
     <div class="panel stack"><h3>Profile and goal</h3>
@@ -994,6 +1013,8 @@ function vSettings(){
         <li>Your content, captions and numbers belong to you. Rollout Room only stores them to show you your own workspace.</li>
         <li>No one else can see your workspace.${MODE==="supabase" ? " It's encrypted on your device (AES-256) before it's saved, and the server never sees your password or recovery code, so even the people running the server can't read it." : ""} Your media kit is public only if you create a link for it; that published copy isn't encrypted, because partners need to read it.</li>
         <li>When you ask for suggestions, the request goes to Claude's API just to write the answer. Anthropic doesn't train its models on API data by default.</li>
+        ${MODE==="supabase" ? `<li>When you connect accounts, Upload-Post holds the connection and publishes what you approve. Captions go to Upload-Post and the platform when a post is sent. Upload-Post's policy says it never uses your content to train AI.</li>
+        <li>Photos and videos you attach are stored privately in your own folder until they're posted, then deleted. They aren't end-to-end encrypted, because Upload-Post and the platform need to read them to publish.</li>` : ""}
         <li>Start over below deletes everything, including your media kit link.</li></ul></div>
     ${S.sampleMode ? "" : `<div class="panel stack"><h3>Start over</h3><p class="muted small">Deletes your profile, plan, queue, vault, logged counts and media kit link.</p>
       <div>${UI.confirm==="reset"?`<button class="btn danger" data-act="reset">Delete everything</button> <button class="btn ghost" data-act="cancelDel">Cancel</button>`:`<button class="btn danger" data-act="askReset">Start over</button>`}</div></div>`}
@@ -1083,7 +1104,7 @@ Return ONLY JSON: {"options":[{"hook":"first words on screen or first line","cap
 
 /* ================= actions ================= */
 function startWizard(){
-  UI.draft = {name:"", creatorType:"Musician", world:"", audience:"", tone:"", goal:10000, goalDate:`${new Date().getFullYear()}-12-31`, goalPlatform:"ig", why:[], campaign:"", platforms:["ig","tt","x"], handles:{}, connections:{ig:"demo",tt:"demo",x:"demo"}, hours:6, enjoy:[]};
+  UI.draft = {name:"", creatorType:"Musician", world:"", audience:"", tone:"", goal:10000, goalDate:`${new Date().getFullYear()}-12-31`, goalPlatform:"ig", why:[], campaign:"", platforms:["ig","tt","x"], handles:{}, connections: MODE==="supabase" ? {ig:"live",tt:"live",x:"live"} : {ig:"demo",tt:"demo",x:"demo"}, hours:6, enjoy:[]};
   UI.wiz = 1;
 }
 async function copyText(text, msg="Copied"){
@@ -1096,7 +1117,7 @@ function collectComposer(id){
   const x = D().get(id); if(!x) return;
   const plat = el("c_plat").value;
   const next = {...clone(x), platform:plat, date:el("c_date").value, time:el("c_time").value, format:(FORMATS[plat]||[]).includes(el("c_fmt").value) ? el("c_fmt").value : (FORMATS[plat]||[""])[0],
-    vaultId:el("c_vault").value, caption:el("c_cap").value, hashtags:el("c_tags").value.split(/[\s,]+/).filter(Boolean).map(t=>t.startsWith("#")?t:"#"+t), notes:el("c_notes").value};
+    vaultId:el("c_vault").value, caption:el("c_cap").value, tiktokDraft: el("c_ttdraft") ? el("c_ttdraft").checked : !!x.tiktokDraft, hashtags:el("c_tags").value.split(/[\s,]+/).filter(Boolean).map(t=>t.startsWith("#")?t:"#"+t), notes:el("c_notes").value};
   if(JSON.stringify(next) !== JSON.stringify(x)) put(id, next);
 }
 function kitText(){
@@ -1144,7 +1165,7 @@ document.addEventListener("click", async ev => {
       if(UI.wiz===1 && !w.name){ toast("Add your name first."); return; }
       if(UI.wiz===3 && !w.platforms.length){ toast("Pick at least one platform."); return; }
       if(UI.wiz < 4){ UI.wiz++; render(); window.scrollTo({top:0}); return; }
-      const connections = {}; w.platforms.forEach(k => connections[k] = w.connections[k] || "demo");
+      const connections = {}; w.platforms.forEach(k => connections[k] = w.connections[k] || (MODE==="supabase" ? (canLive(k) ? "live" : "manual") : "demo"));
       let gp = w.goalPlatform; if(gp !== "all" && !w.platforms.includes(gp)) gp = w.platforms[0];
       put("profile", {name:w.name, creatorType:w.creatorType, world:w.world, audience:w.audience, tone:w.tone, goal:w.goal, goalDate:w.goalDate, goalPlatform:gp, why:w.why, campaign:w.campaign,
         platforms:w.platforms, handles:Object.fromEntries(w.platforms.map(k=>[k, w.handles[k]||""])), connections, hours:w.hours, enjoy:w.enjoy, onboarded:true, kit:{}, createdAt:Date.now()});
@@ -1221,7 +1242,7 @@ document.addEventListener("click", async ev => {
     }); break;
     case "signout": if(S.uid) await deviceKeys.del(S.uid); await S.sb.auth.signOut(); clearSession(); UI.tab = "dash"; UI.wiz = 0; UI.auth = null; UI.rcNew = null; UI.secMsg = null; render(); break;
     case "aplat": UI.aPlat = b.dataset.k; render(); break;
-    case "strategy": strategy(); break;
+    case "strategy": if(S.sample) strategy(); else buildDataPlan(); break;
     case "fillTwoWeeks": fillTwoWeeks(); break;
     case "qf": UI.qFilter = b.dataset.f; render(); break;
     case "newPost": { const p = profile(); const nid = rid("p"); const k = (p.platforms||["ig"])[0]; put(nid, {platform:k, date:ymd(addDays(new Date(),1)), time:"19:00", format:(FORMATS[k]||[""])[0], vaultId:"", status:"draft", caption:"", hashtags:[], notes:"", suggestions:[]}); UI.open = nid; UI.img = null; render(); break; }
@@ -1245,8 +1266,21 @@ document.addEventListener("click", async ev => {
       break; }
     case "saveApprove": { collectComposer(id); const cur = D().get(id); if(!cur.caption){ toast("Write or pick a caption before approving."); return; } if(overLimit(cur)){ toast(`Too long for ${pname(cur.platform)}. Trim it before approving.`); return; } put(id, {...clone(cur), status:"approved"}); UI.open = null; render(); toast("Approved"); break; }
     case "approve": if(overLimit(x)){ toast(`Too long for ${pname(x.platform)}. Open it and trim it first.`); return; } put(id, {...clone(x), status:"approved"}); toast("Approved"); break;
-    case "schedule": if(profile().connections?.[x.platform]==="demo"){ put(id, {...clone(x), status:"scheduled"}); toast(`Scheduled (simulated): ${PLATFORMS[x.platform].route.toLowerCase()}`); } else { put(id, {...clone(x), status:"published", publishedAt:Date.now()}); toast("Marked posted"); } break;
+    case "schedule": if(isLive(x.platform)){ publishPost(id); break; } if(profile().connections?.[x.platform]==="demo"){ put(id, {...clone(x), status:"scheduled"}); toast(`Scheduled (simulated): ${PLATFORMS[x.platform].route.toLowerCase()}`); } else { put(id, {...clone(x), status:"published", publishedAt:Date.now()}); toast("Marked posted"); } break;
     case "copy": copyText(captionText(x), "Caption copied"); break;
+    case "connectAccounts": connectAccounts(); break;
+    case "refreshAccounts": refreshAccounts().then(a => a && syncStats(true)); break;
+    case "syncNow": syncStats(true); break;
+    case "askDisconnect": UI.confirm = "dc_" + b.dataset.k; render(); break;
+    case "disconnect": { const k = b.dataset.k; UI.confirm = null; try{ await social("disconnect", {platform:k}); const p = clone(profile()); p.connections[k] = "manual"; put("profile", p); await refreshAccounts(true); toast(`${pname(k)} disconnected`); }catch(e){ toast(e.userMessage || "Couldn't disconnect."); } render(); break; }
+    case "pickMedia": { collectComposer(id); const kind = postKind(x.format); const inp = $("#mediaPick"); inp.accept = kind==="video" ? "video/*" : ["ig","th"].includes(x.platform) ? "image/*,video/*" : "image/*"; inp.multiple = kind !== "video"; UI.mediaFor = id; inp.click(); break; }
+    case "rmMedia": collectComposer(id); removeMedia(id, Number(b.dataset.i)); break;
+    case "unschedule": try{ if(x.jobId) await social("cancel", {jobId:x.jobId}); put(id, {...clone(x), status:"approved", jobId:null}); toast("Scheduling cancelled"); }catch(e){ toast(e.userMessage || "Couldn't cancel."); } break;
+    case "retryPost": put(id, {...clone(x), status:"approved", error:null, jobId:null, requestId:null}); publishPost(id); break;
+    case "useBest": case "useBestTags": { collectComposer(id); const cur = D().get(id); const bp = (dataFor(cur.platform).posts||[]).find(q => q.id === b.dataset.pid); if(!bp) break; const tags = tagsIn(bp.caption);
+      if(a === "useBest"){ let cap = bp.caption; tags.forEach(t => cap = cap.split(t).join("")); put(id, {...clone(cur), caption:cap.replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim(), hashtags:tags}); toast("Added to your caption. Make it yours."); }
+      else put(id, {...clone(cur), hashtags:tags});
+      break; }
     case "suggest": suggest(id); break;
     case "useSugg": { collectComposer(id); const cur = D().get(id); const s = cur.suggestions[Number(b.dataset.i)]; put(id, {...clone(cur), caption: s.hook && !s.caption.includes(s.hook) ? `${s.hook}\n\n${s.caption}` : s.caption, hashtags:s.hashtags}); toast("Added to your caption. Make it yours."); break; }
     case "useTags": { collectComposer(id); const cur = D().get(id); put(id, {...clone(cur), hashtags:cur.suggestions[Number(b.dataset.i)].hashtags}); break; }
@@ -1286,7 +1320,183 @@ document.addEventListener("click", async ev => {
     case "reset": UI.confirm = null; [...S.docs.keys()].forEach(k => del(k)); if(S.kits) Promise.resolve(S.kits.remove()).catch(()=>{}); UI.tab = "dash"; render(); toast("Workspace deleted"); break;
   }
 });
+$("#mediaPick").addEventListener("change", e => { const files = [...(e.target.files||[])]; if(files.length && UI.mediaFor) attachMedia(UI.mediaFor, files); e.target.value = ""; });
 $("#imgPick").addEventListener("change", e => { const f = e.target.files?.[0]; if(f){ UI.img = f; render(); } e.target.value = ""; });
+
+/* ---------- live accounts (connected mode, through the social function and Upload-Post) ---------- */
+const LIVE_KEYS = ["ig","tt","yt","x","th"];
+const canLive = k => MODE === "supabase" && LIVE_KEYS.includes(k);
+const liveAccounts = () => D().get("acct")?.accounts || {};
+const isLive = k => canLive(k) && !S.sampleMode && !!liveAccounts()[k];
+const postKind = f => /Reel|Video|Short/.test(f||"") ? "video" : /Carousel|Photo|Image/.test(f||"") ? "photos" : "text";
+const nowStamp = () => today() + " " + new Date().toTimeString().slice(0,5);
+async function social(action, body={}){
+  const { data, error } = await S.sb.functions.invoke("social", { body:{ action, ...body } });
+  if(error){ let msg = "Couldn't reach the posting service. Try again."; try{ const b = await error.context.json(); if(b?.error) msg = b.error; }catch{} throw {userMessage: msg}; }
+  return data || {};
+}
+async function connectAccounts(){
+  UI.busy.connect = true; render(true);
+  try{ const { url } = await social("connect"); if(!url) throw {userMessage:"Couldn't open the connect page."}; location.href = url; }
+  catch(e){ UI.busy.connect = false; toast(e.userMessage || "Couldn't open the connect page."); render(true); }
+}
+async function refreshAccounts(quiet){
+  try{
+    const { accounts = {} } = await social("accounts");
+    if(JSON.stringify(liveAccounts()) !== JSON.stringify(accounts) || !D().get("acct")) put("acct", {at:Date.now(), accounts});
+    const p = profile();
+    if(p){
+      const handles = {...(p.handles||{})}, connections = {...(p.connections||{})}, platforms = [...(p.platforms||[])];
+      for(const [k,a] of Object.entries(accounts)){ if(a.handle) handles[k] = String(a.handle).startsWith("@") ? a.handle : "@" + a.handle; connections[k] = "live"; if(!platforms.includes(k)) platforms.push(k); }
+      const next = {...clone(p), handles, connections, platforms};
+      if(JSON.stringify(next) !== JSON.stringify(p)) put("profile", next);
+    }
+    if(!quiet) toast(Object.keys(accounts).length ? `Connected: ${Object.keys(accounts).map(pname).join(", ")}` : "No accounts connected yet.");
+    return accounts;
+  }catch(e){ if(!quiet) toast(e.userMessage || "Couldn't check your connections."); return null; }
+}
+function liveFormat(k, type){
+  const t = String(type||"").toUpperCase(); const img = /IMAGE|PHOTO/.test(t);
+  if(k==="ig") return t.includes("CAROUSEL") ? "Carousel" : /VIDEO|REEL/.test(t) ? "Reel" : "Photo";
+  if(k==="tt") return img ? "Photo carousel" : "Video";
+  if(k==="yt") return "Short";
+  if(k==="x") return t.includes("VIDEO") ? "Video" : img ? "Image" : "Text";
+  if(k==="th") return img || t.includes("CAROUSEL") ? "Photo" : "Text";
+  return (FORMATS[k]||["Post"])[0];
+}
+function toLivePost(k, p){
+  const d = p.time ? new Date(p.time) : null; if(!d || isNaN(d)) return null;
+  const m = p.metrics || {}; const n = v => Number(v) || 0;
+  return {id:String(p.id), platform:k, date:ymd(d), hour:d.getHours(), dow:d.getDay(), format:liveFormat(k, p.type), caption:p.caption||"", url:p.url||"",
+    reach:n(m.reach)||n(m.views)||n(m.impressions), likes:n(m.likes), comments:n(m.comments), shares:n(m.shares), saves:n(m.saves)||n(m.favorites), follows:n(m.new_followers), viral:false};
+}
+function toAudience(demo){
+  if(!demo || typeof demo !== "object") return null;
+  const norm = obj => { const e = Object.entries(obj||{}).map(([k,v]) => [k, Number(typeof v === "object" ? v?.value : v) || 0]).filter(([,v]) => v > 0); const t = e.reduce((a,[,v]) => a+v, 0); return t ? e.map(([name,v]) => ({name, share:v/t})) : []; };
+  const ages = norm(demo.age).sort((a,b) => a.name.localeCompare(b.name, undefined, {numeric:true})); if(!ages.length) return null;
+  const g = norm(demo.gender); const gv = (...p) => sum(g.filter(x => p.some(q => x.name.toLowerCase().startsWith(q))).map(x => x.share));
+  const women = gv("f","w"), men = gv("m");
+  return {ages, gender:{women, men, other:Math.max(0, 1-women-men)}, cities:norm(demo.city).sort((a,b) => b.share-a.share).slice(0,5)};
+}
+async function syncStats(force){
+  if(MODE !== "supabase" || !S.key || S.sampleMode) return;
+  const ks = LIVE_KEYS.filter(k => isLive(k)); if(!ks.length) return;
+  const last = Math.min(...ks.map(k => D().get("an_"+k)?.at || 0));
+  if(!force && Date.now() - last < 6*3600e3) return;
+  UI.busy.sync = true; render(true);
+  try{
+    const { platforms = {} } = await social("stats", { platforms: ks });
+    for(const [k, v] of Object.entries(platforms)){
+      const prev = D().get("an_"+k) || {};
+      const f = Number(v.account?.followers);
+      const series = (prev.series||[]).filter(r => r.date !== today()); if(Number.isFinite(f) && v.account?.followers != null) series.push({date:today(), v:f});
+      const byId = new Map((prev.posts||[]).map(p => [p.id, p])); (v.posts||[]).map(p => toLivePost(k, p)).filter(Boolean).forEach(p => byId.set(p.id, p));
+      put("an_"+k, {at:Date.now(), account:v.account||{}, series:series.slice(-400), posts:[...byId.values()].sort((a,b) => a.date.localeCompare(b.date)).slice(-200), audience:toAudience(v.account?.follower_demographics) || prev.audience || null});
+    }
+    if(force) toast("Numbers updated");
+  }catch(e){ if(force) toast(e.userMessage || "Couldn't update your numbers."); }
+  UI.busy.sync = false; render(true);
+}
+
+// Media files are shared by a drop's versions, so a file is only removed once nothing waiting to post still uses it.
+function releaseMedia(paths, exceptId){
+  const inUse = new Set(posts().filter(p => p.id !== exceptId && !["published"].includes(p.status)).flatMap(p => (p.media||[]).map(m => m.path)));
+  const gone = paths.filter(p => !inUse.has(p)); if(gone.length) S.sb.storage.from("post-media").remove(gone).catch(() => {});
+}
+async function attachMedia(id, files){
+  const x = D().get(id); if(!x) return; const kind = postKind(x.format); let list = [...(x.media||[])];
+  UI.busy["up_"+id] = true; render(true);
+  for(const f of files){
+    const isVid = f.type.startsWith("video/"), isImg = f.type.startsWith("image/");
+    if(f.size > 50*1024*1024){ toast(`${f.name} is over 50 MB.`); continue; }
+    if(kind === "video" && !isVid){ toast("This format needs a video."); continue; }
+    if(kind === "photos" && !isImg && !(isVid && ["ig","th"].includes(x.platform))){ toast("This format needs photos."); continue; }
+    const path = `${S.uid}/${id}/${Date.now()}-${f.name.replace(/[^\w.\-]+/g, "_").slice(-80)}`;
+    const { error } = await S.sb.storage.from("post-media").upload(path, f, { contentType:f.type, upsert:false });
+    if(error){ toast(`Couldn't upload ${f.name}. Try again.`); continue; }
+    if(kind === "video" && list.length){ releaseMedia(list.map(m => m.path), id); list = []; }
+    list.push({path, name:f.name, type:f.type, size:f.size});
+  }
+  delete UI.busy["up_"+id];
+  const cur = D().get(id); if(cur) put(id, {...clone(cur), media:list}); else render(true);
+}
+function removeMedia(id, i){ const x = clone(D().get(id)); const [m] = (x.media||[]).splice(i, 1); put(id, x); if(m) releaseMedia([m.path], id); }
+async function publishPost(id){
+  const x = D().get(id); if(!x) return;
+  const kind = postKind(x.format);
+  if(kind !== "text" && !(x.media||[]).length){ toast(`Add a ${kind==="video"?"video":"photo"} before scheduling.`); UI.open = id; UI.tab = "queue"; render(); return; }
+  if(kind === "text" && !["x","th"].includes(x.platform)){ toast(`${pname(x.platform)} needs a photo or video.`); return; }
+  UI.busy["pub_"+id] = true; render(true);
+  try{
+    const caption = x.format === "Thread" ? captionParts(x).map(t => t.trim()).join("\n\n") + ((x.hashtags||[]).length ? "\n\n" + x.hashtags.join(" ") : "") : captionText(x);
+    const r = await social("publish", {postId:id, platform:x.platform, kind, caption, media:(x.media||[]).map(m => m.path), date:x.date, time:x.time||"", timezone:Intl.DateTimeFormat().resolvedOptions().timeZone, tiktokDraft:!!x.tiktokDraft});
+    const cur = clone(D().get(id));
+    if(r.state === "failed") put(id, {...cur, status:"failed", error:r.error||"The platform rejected it."});
+    else put(id, {...cur, status: r.state === "published" ? "published" : "scheduled", jobId:r.jobId||null, requestId:r.requestId||null, url:r.url||"", error:null, publishedAt: r.state === "published" ? Date.now() : null});
+    toast(r.state === "scheduled" ? `Scheduled for ${pname(x.platform)}, ${fmtDay(x.date)}${x.time?" at "+x.time:""}` : r.state === "failed" ? `${pname(x.platform)} rejected it: ${r.error}` : `Sending to ${pname(x.platform)} now`);
+  }catch(e){ toast(e.userMessage || "Couldn't schedule it."); }
+  delete UI.busy["pub_"+id]; render(true);
+}
+let lastPublishCheck = 0;
+async function checkPublishing(){
+  if(MODE !== "supabase" || !S.key || S.sampleMode || Date.now() - lastPublishCheck < 60000) return;
+  lastPublishCheck = Date.now();
+  const due = posts().filter(p => p.status === "scheduled" && (p.jobId || p.requestId) && (p.requestId || (p.date + " " + (p.time||"00:00")) <= nowStamp()));
+  for(const p of due.slice(0, 10)){
+    try{
+      const r = await social("status", {platform:p.platform, jobId:p.jobId, requestId:p.requestId}); const cur = clone(D().get(p.id)); if(!cur) continue;
+      if(r.state === "published"){ put(p.id, {...cur, status:"published", url:r.url||cur.url||"", publishedAt:Date.now()}); releaseMedia((cur.media||[]).map(m => m.path), p.id); }
+      else if(r.state === "failed") put(p.id, {...cur, status:"failed", error:r.error||"The post failed."});
+    }catch{}
+  }
+}
+
+/* ---------- ideas from a creator's best posts (no AI) ---------- */
+const tagsIn = s => [...new Set(String(s||"").match(/#[\p{L}\p{N}_]+/gu) || [])].slice(0, 8);
+function bestPosts(k, n=3){ return (dataFor(k).posts||[]).filter(p => p.caption).map(p => ({...p, eng:p.likes+p.comments+p.shares+p.saves})).sort((a,b) => b.eng-a.eng || b.reach-a.reach).slice(0, n); }
+function bestIdeasHtml(x){
+  const k = x.platform; const top = bestPosts(k); const f = formatStats(k)[0]; const b = bestSlot([k]);
+  const tip = f ? `<p class="small">Your ${esc(f.format)}s reach the most people here (${fmtN(f.reach)} on average)${b?`, and ${b.day} ${b.block.toLowerCase()} is your strongest time`:""}.</p>` : "";
+  const empty = isLive(k) ? `Your best ${pname(k)} posts show up here once your numbers refresh.` : canLive(k) && !S.sampleMode ? `Connect ${pname(k)} in Settings to see ideas from your best posts.` : `Ideas appear here once you have ${pname(k)} posts with numbers.`;
+  return `<div class="spread"><span class="label">From your best ${pname(k)} posts</span></div>${tip}
+    ${top.map(p => { const tags = tagsIn(p.caption); return `<div class="sugg"><span class="muted small mono">${fmtDay(p.date)} · ${fmtK(p.reach)} reach · ${fmtN(p.eng)} engagements</span>
+      <span class="c">${esc(p.caption.length > 280 ? p.caption.slice(0,280) + "…" : p.caption)}</span>
+      <div class="row"><button class="btn sm" data-act="useBest" data-id="${x.id}" data-pid="${esc(p.id)}">Use as starting point</button>${tags.length?`<button class="btn ghost sm" data-act="useBestTags" data-id="${x.id}" data-pid="${esc(p.id)}">Use its hashtags</button>`:""}${p.url?`<a class="btn ghost sm" href="${esc(p.url)}" target="_blank" rel="noopener">View post</a>`:""}</div></div>`; }).join("") || `<p class="muted small">${empty}</p>`}`;
+}
+
+/* ---------- a plan built from the numbers (no AI) ---------- */
+const HOURS_PER = {video:1.5, photos:0.75, text:0.25};
+const DAY_ORDER = ["Thu","Sun","Tue","Sat","Mon","Wed","Fri"];
+const START_CADENCE = {ig:4, tt:5, yt:2, x:5, th:3, fb:2};
+const DAY_NAMES = {Sun:"Sundays", Mon:"Mondays", Tue:"Tuesdays", Wed:"Wednesdays", Thu:"Thursdays", Fri:"Fridays", Sat:"Saturdays"};
+function buildDataPlan(){
+  const p = profile(); const ks = p.platforms || [];
+  if(!ks.length){ toast("Add a platform in Settings first."); return; }
+  const rows = ks.map(k => {
+    const c = cadence(k), fs = formatStats(k), b = bestSlot([k]);
+    const formats = fs.length ? fs.slice(0,2).map(f => f.format) : [(FORMATS[k]||["Post"])[0]];
+    const why = c ? `Weeks with ${c.rec} posts gained ${sgn(Math.round(c.recRow.gain))} followers on average${c.topRow.n > c.rec ? `; posting ${c.topRow.n}× a week didn't add much more` : ""}.`
+      : fs.length > 1 ? `${fs[0].format}s reach ${fmtN(fs[0].reach)} people on average, more than ${fs[fs.length-1].format}s (${fmtN(fs[fs.length-1].reach)}).`
+      : fs.length ? `${fs[0].format}s are working: ${fmtN(fs[0].reach)} average reach.` : "A starting point until there's enough data. Rebuild in a few weeks.";
+    const perWeek = c ? c.rec : (START_CADENCE[k] || 3);
+    return {k, perWeek, wanted:perWeek, formats, when: b ? `${DAY_NAMES[b.day]}, ${b.block.toLowerCase()}, then spread out` : "Spread across the week, evenings", time: b ? BLOCK_TIME[b.block] : "19:00", why, days: b ? [b.day, ...DAY_ORDER.filter(d => d !== b.day)] : DAY_ORDER};
+  });
+  const cost = r => r.perWeek * HOURS_PER[postKind(r.formats[0])];
+  const budget = Number(p.hours) || 6; let total = sum(rows.map(cost));
+  while(total > budget && rows.some(r => r.perWeek > 1)){ rows.filter(r => r.perWeek > 1).sort((a,b) => cost(b) - cost(a))[0].perWeek--; total = sum(rows.map(cost)); }
+  rows.forEach(r => { if(r.perWeek < r.wanted) r.why += ` Trimmed to ${r.perWeek} a week to fit your ${budget} hours; add hours in Settings to post more.`; });
+  const vs = vault(); let vi = 0;
+  const weeklySlots = rows.flatMap(r => r.days.slice(0, Math.min(7, r.perWeek)).map((day, i) => ({platform:r.k, day, time:r.time, format:r.formats[i % r.formats.length], pillar:"",
+    idea: vs.length ? `Bring back "${vs[vi++ % vs.length].title}" with a new angle` : "Something from your camera roll that fits your world"})));
+  const g = goalStats(); const ins = insights()[0];
+  put("strategy", {at:Date.now(), source:"data",
+    summary:`Post ${sum(rows.map(r => r.perWeek))} times a week across ${rows.length} platform${rows.length===1?"":"s"}, about ${Math.round(total*10)/10} of your ${budget} hours.${ins ? " " + ins.t : ""}`,
+    northStar:`New ${g.label} followers per week. You need about +${fmtN(Math.ceil(g.perDay*7))} a week to reach ${fmtN(g.goal)} by ${fmtDay(p.goalDate)}.`,
+    cadence:rows.map(r => ({platform:r.k, perWeek:r.perWeek, formats:r.formats, when:r.when, why:r.why})),
+    hoursCheck:"Hours are estimated at about 1.5 per video, 45 minutes per photo post and 15 minutes per text post.",
+    weeklySlots});
+  toast("Plan built from your numbers");
+}
 
 /* ================= boot ================= */
 const hashKit = (() => { try{ const m = location.hash.match(/^#kit-([a-z0-9]+)$/); return m ? m[1] : null; }catch{ return null; } })();
@@ -1388,11 +1598,14 @@ async function loadWorkspace(){
     save: async d => { const { error } = await sb.from("media_kits").upsert({ user_id: uid, code: d.code, data: d, updated_at: new Date().toISOString() }); if(error) throw {code:"unavailable"}; },
     remove: async () => { await sb.from("media_kits").delete().eq("user_id", uid); }
   };
-  S.sample = { json: aiCall, limits: async () => ({ images:{ maxCount:3, mediaTypes:["image/jpeg","image/png","image/webp","image/gif"] } }) };
-  S.canImg = true; $("#imgPick").accept = "image/jpeg,image/png,image/webp,image/gif";
+  // Captions and plans come from the creator's own best posts here, not from an AI service.
+  S.sample = null; S.canImg = false;
   S.ready = true; UI.auth = null; UI.authErr = null;
   if(!S.docs.get("profile")?.onboarded && !UI.wiz && !S.sampleMode) startWizard();
-  render(true); return true;
+  render(true);
+  if(location.hash === "#connected"){ try{ history.replaceState(null, "", location.pathname); }catch{} UI.tab = "settings"; refreshAccounts().then(a => a && syncStats(true)); }
+  else setTimeout(() => { refreshAccounts(true).then(() => { syncStats(false); checkPublishing(); }); }, 300);
+  return true;
 }
 async function unlockWith(password, remember){
   const row = await keyRow();

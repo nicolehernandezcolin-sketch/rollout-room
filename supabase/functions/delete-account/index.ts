@@ -1,5 +1,5 @@
-// Deletes the signed-in creator's account. Their workspace, keys, media kit and usage rows go with it
-// (every table cascades from auth.users).
+// Deletes the signed-in creator's account: their social connections at Upload-Post, any media waiting to
+// post, then the account itself. Workspace, keys, media kit and usage rows cascade from auth.users.
 
 import { createClient } from 'npm:@supabase/supabase-js@^2';
 
@@ -21,7 +21,23 @@ Deno.serve(async (req) => {
   const { data: auth } = await admin.auth.getUser(token);
   if (!auth.user) return reply({ error: 'Sign in first.' }, 401);
 
-  const { error } = await admin.auth.admin.deleteUser(auth.user.id);
+  const uid = auth.user.id;
+  // Their Upload-Post profile (and with it the social connections) and any media still waiting to post.
+  const key = Deno.env.get('UPLOAD_POST_API_KEY');
+  if (key) {
+    await fetch('https://api.upload-post.com/api/uploadposts/users', {
+      method: 'DELETE', headers: { Authorization: `Apikey ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: `rr-${uid}` }),
+    }).catch(() => {});
+  }
+  const bucket = admin.storage.from('post-media');
+  const { data: folders } = await bucket.list(uid, { limit: 1000 });
+  for (const f of folders ?? []) {
+    const { data: files } = await bucket.list(`${uid}/${f.name}`, { limit: 1000 });
+    if (files?.length) await bucket.remove(files.map((x) => `${uid}/${f.name}/${x.name}`));
+  }
+
+  const { error } = await admin.auth.admin.deleteUser(uid);
   if (error) return reply({ error: 'Could not delete the account.' }, 500);
   return reply({ ok: true });
 });
